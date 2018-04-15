@@ -1,0 +1,9 @@
+aiohttp==1.0.5
+async-timeout==2.0.1
+beautifulsoup4==4.6.0
+discord.py==0.16.12
+pipenv==11.9.0
+requests==2.18.4
+tabulate==0.8.2
+virtualenv==15.2.0
+virtualenv-clone==0.3.0
