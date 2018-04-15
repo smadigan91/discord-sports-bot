@@ -5,7 +5,7 @@ from requests import get
 from tabulate import tabulate
 
 stats_url = 'https://www.baseball-reference.com/leagues/daily.fcgi?request=1&type={type}&dates={dates}&level=mlb'
-blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={first}{last}&sport=mlb'
+blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={first}+{last}&sport=mlb'
 pitcher_stats = ["player", "", "IP", "H", "R", "ER", "BB", "SO", "pitches"]
 batter_stats_good = ["player", "PA", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SB"]
 batter_stats_bad = ["player", "PA", "H", "BB", "SO", "GIDP", "CS"]
@@ -17,27 +17,27 @@ pitcher_display = ["NAME"] + pitcher_stats[1:-1] + ["#P"]
 
 def fetch_blurb(first, last, player_url=None, depth=1, original_first=None):
 #     print(blurb_search_url.format(first=first, last=last))
-    response = get(player_url if player_url else blurb_search_url.format(first=first, last=("+" + last if last else "")))
+    response = get(player_url if player_url else blurb_search_url.format(first=first, last=last))
 #     print(response.text)
     soup = BeautifulSoup(response.text, 'html.parser')
     # did we land a result page?
     if not soup.findChild('div', class_='RW_pn'):
-    # try again with blank first name, just last name if no search results
         name_map = {}
         results_table = soup.find('table', attrs={'id':'cp1_tblSearchResults'})
         # filter results, omitting duplicate "position" links that don't include the player's name
-        filtered_results = results_table.findChildren(lambda tag:tag.name == 'a' and "player" in tag["href"] and len(tag.text) > 3)
+        filtered_results = results_table.findChildren(lambda tag:tag.name == 'a' and 'player' in tag['href'] and len(tag.text) > 3)
         if not filtered_results:
             if depth == 1:
+                # try again with blank first name, just last name if no search results
                 return fetch_blurb("", last, None, depth + 1, first)
             else: raise NoResultsError("No results for %s %s" % (original_first, last))
         else:
             for result in filtered_results:
                 name = " ".join(result.text.split())
                 name_map[result] = SequenceMatcher(None, (original_first if original_first else first) + " " + last, name).ratio()
-#         sorted_names = {(k, name_map[k])for k in sorted(name_map, key=name_map.get)}
+        # sort names by similarity to search criteria
         sorted_names = sorted(name_map, key=name_map.get, reverse=True)
-        return fetch_blurb(first, last, "http://www.rotoworld.com" + sorted_names[0].get('href'))  # this should work?
+        return fetch_blurb(first, last, 'http://www.rotoworld.com' + sorted_names[0].get('href'))  # this should work?
 #             print(result.find('a').get('href'))
     else:
         news = soup.findChildren('div', class_='playernews')
