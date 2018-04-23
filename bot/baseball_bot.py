@@ -15,10 +15,9 @@ pitcher_display = ["NAME"] + pitcher_stats[1:-1] + ["#P"]
 # if can't find with first name, search by last name, then re-search results for matching first name? (T.J. McFarland)
 
 
-def fetch_blurb(first, last, player_url=None, depth=1, original_first=None):
-#     print(blurb_search_url.format(first=first, last=last))
-    response = get(player_url if player_url else blurb_search_url.format(first=first, last=last))
-#     print(response.text)
+def fetch_blurb(first, last, player_url=None):
+    # for some weird reason its actually better to omit the first name in the search form
+    response = get(player_url if player_url else blurb_search_url.format(first="", last=last))
     soup = BeautifulSoup(response.text, 'html.parser')
     # did we land a result page?
     if not soup.findChild('div', class_='RW_pn'):
@@ -27,14 +26,11 @@ def fetch_blurb(first, last, player_url=None, depth=1, original_first=None):
         # filter results, omitting duplicate "position" links that don't include the player's name
         filtered_results = results_table.findChildren(lambda tag:tag.name == 'a' and 'player' in tag['href'] and len(tag.text) > 3)
         if not filtered_results:
-            if depth == 1:
-                # try again with blank first name, just last name if no search results
-                return fetch_blurb("", last, None, depth + 1, first)
-            else: raise NoResultsError("No results for %s %s" % (original_first, last))
+            raise NoResultsError("No results for %s %s" % (first, last))
         else:
             for result in filtered_results:
                 name = " ".join(result.text.split())
-                name_map[result] = SequenceMatcher(None, (original_first if original_first else first) + " " + last, name).ratio()
+                name_map[result] = SequenceMatcher(None, first + " " + last, name).ratio()
         # sort names by similarity to search criteria
         sorted_names = sorted(name_map, key=name_map.get, reverse=True)
         return fetch_blurb(first, last, 'http://www.rotoworld.com' + sorted_names[0].get('href'))  # this should work?
@@ -122,7 +118,7 @@ class NoResultsError(Exception):
     
 
 # testing\
-fetch_blurb("Micah", "Johnson")
+fetch_blurb("JD", "Martinez")
 # best_pitchers()
 # print("\n")
 # worst_pitchers()
