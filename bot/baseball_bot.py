@@ -3,6 +3,10 @@ from difflib import SequenceMatcher
 from bs4 import BeautifulSoup
 from requests import get
 from tabulate import tabulate
+import discord
+import asyncio
+import base64
+import json
 
 stats_url = 'https://www.baseball-reference.com/leagues/daily.fcgi?request=1&type={type}&dates={dates}&level=mlb'
 blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={first}+{last}&sport=mlb'
@@ -13,6 +17,24 @@ pitcher_display = ["NAME"] + pitcher_stats[1:-1] + ["#P"]
 
 # try to fetch player by first and last name
 # if can't find with first name, search by last name, then re-search results for matching first name? (T.J. McFarland)
+
+class SportsClient(discord.Client):
+    
+    @asyncio.coroutine
+    def on_message(self, message):
+        if(message.content.startswith('/blurb')):
+            if(message.channel.name == "sportsbot-testing"):
+                try:
+                    name = message.content.split()[1:]
+                    first = name[0]
+                    last = " ".join(name[1:])#hopefully handles the Jrs
+                    if not first or not last:
+                        raise ValueError('A first and last name must be provided')
+                    blurb = fetch_blurb(first,last)
+                    embedded_blurb = discord.Embed(title=" ".join([first,last]).title(),description=blurb)
+                    yield from self.send_message(message.channel,embed=embedded_blurb)
+                except NoResultsError as ex:
+                    yield from self.send_message(message.channel,content=ex.message)
 
 
 def fetch_blurb(first, last, player_url=None):
@@ -43,9 +65,8 @@ def fetch_blurb(first, last, player_url=None):
             recent_news = news[0]
             report = recent_news.find('div', class_='report')
             impact = recent_news.find('div', class_='impact')
-            print(name + ":\n")
-            print(report.text + '\n')
-            print(impact.text)
+            blurb = report.text + '\n\n' + impact.text
+            return blurb
         else: raise NoResultsError("No recent player news for %s %s" % (first, last))
     
     # if only one result, I think it just redirects? test this one first with "pollock"
@@ -115,10 +136,14 @@ class NoResultsError(Exception):
     def __init__(self, message):
         super().__init__(message)
         self.message = message
+        
     
 
 # testing\
-fetch_blurb("JD", "Martinez")
+#TOKEN = json.loads(open('../token.json','r').read())["APP_TOKEN"]
+# client = SportsClient()
+# client.run(TOKEN)
+# fetch_blurb("JD", "Martinez")
 # best_pitchers()
 # print("\n")
 # worst_pitchers()
