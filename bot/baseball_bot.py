@@ -5,10 +5,11 @@ from requests import get
 from tabulate import tabulate
 import discord
 import asyncio
-import base64
 import json
+import urllib
 
 stats_url = 'https://www.baseball-reference.com/leagues/daily.fcgi?request=1&type={type}&dates={dates}&level=mlb'
+search_url = 'https://www.baseball-reference.com/search/search.fcgi?search={search}'
 blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={first}+{last}&sport=mlb'
 pitcher_stats = ["player", "", "IP", "H", "R", "ER", "BB", "SO", "pitches"]
 batter_stats_good = ["player", "PA", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SB"]
@@ -70,10 +71,25 @@ def fetch_blurb(first, last, player_url=None):
         else: raise NoResultsError("No recent player news for %s %s" % (first, last))
     
     # if only one result, I think it just redirects? test this one first with "pollock"
+
+#just better to do a search and find the best matching result
+def fetch_player_stats(search):
+    quoted = urllib.parse.quote(search)
+    print(quoted)
+    response = get(search_url.format(search=quoted))
+    print(response.text.encode('utf-8'))
+    #happy path:
+    #get 'p' with class "listhead" and content "Batting Game Logs"
+    #grab href of 'a' within 'l' that has matching year as content (or just the last one in the list? probably better that way)
+    #append to bbreff root, get response
+    #in response, get div with id all_batting_gamelogs, then get table body within, pick last cell for most recent game
+    #within that row, similar logic looking for "data-stat" per a list of categories
+    
+    #search results page
     
 
-# TODO return date, opponent
-def fetch_stats(player_type, stats, dates='yesterday'):
+# TODO return date, opponent, make top x configurable
+def fetch_daily_stats(player_type, stats, dates='yesterday'):
     response = get(stats_url.format(type=player_type, dates=dates))
     soup = BeautifulSoup(response.text, 'html.parser')
     tables = soup.findChildren('table')
@@ -114,19 +130,19 @@ def fetch_stats(player_type, stats, dates='yesterday'):
 
 # playing with tabular output - it's not well-suited for discord sadly
 def best_pitchers():
-    print("Top 5 Pitching:\n" + tabulate(fetch_stats("p", pitcher_stats)[:5], pitcher_display, tablefmt="grid"))
+    print("Top 5 Pitching:\n" + tabulate(fetch_daily_stats("p", pitcher_stats)[:5], pitcher_display, tablefmt="grid"))
 
 
 def worst_pitchers():
-    print("Bottom 5 Pitching:\n" + tabulate(fetch_stats("p", pitcher_stats)[:-6:-1], pitcher_display, tablefmt="grid"))
+    print("Bottom 5 Pitching:\n" + tabulate(fetch_daily_stats("p", pitcher_stats)[:-6:-1], pitcher_display, tablefmt="grid"))
 
     
 def best_batters():
-    print("Top 5 Batting:\n" + tabulate(fetch_stats("b", batter_stats_good)[:5], ["NAME"] + batter_stats_good[1:], tablefmt="grid"))
+    print("Top 5 Batting:\n" + tabulate(fetch_daily_stats("b", batter_stats_good)[:5], ["NAME"] + batter_stats_good[1:], tablefmt="grid"))
 
     
 def worst_batters():
-    print("Bottom 5 Batting:\n" + tabulate(fetch_stats("b", batter_stats_bad)[:-6:-1], ["NAME"] + batter_stats_bad[1:], tablefmt="grid"))
+    print("Bottom 5 Batting:\n" + tabulate(fetch_daily_stats("b", batter_stats_bad)[:-6:-1], ["NAME"] + batter_stats_bad[1:], tablefmt="grid"))
 
 
 class NoResultsError(Exception):
@@ -136,11 +152,9 @@ class NoResultsError(Exception):
     def __init__(self, message):
         super().__init__(message)
         self.message = message
-        
-    
 
 # testing\
-#TOKEN = json.loads(open('../token.json','r').read())["APP_TOKEN"]
+# TOKEN = json.loads(open('../token.json','r').read())["APP_TOKEN"]
 # client = SportsClient()
 # client.run(TOKEN)
 # fetch_blurb("JD", "Martinez")
