@@ -1,16 +1,20 @@
-from difflib import SequenceMatcher
-
-from bs4 import BeautifulSoup
-from requests import get
-from tabulate import tabulate
-import discord
 import asyncio
+import datetime
+from difflib import SequenceMatcher
 import json
 import urllib
 
-stats_url = 'https://www.baseball-reference.com/leagues/daily.fcgi?request=1&type={type}&dates={dates}&level=mlb'
-search_url = 'https://www.baseball-reference.com/search/search.fcgi?search={search}'
+from bs4 import BeautifulSoup
+import discord
+from requests import get
+from tabulate import tabulate
+
+bbref_url = 'https://www.baseball-reference.com'
+stats_url = bbref_url + '/leagues/daily.fcgi?request=1&type={type}&dates={dates}&level=mlb'
+search_url = bbref_url + '/search/search.fcgi?search={search}'
 blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={first}+{last}&sport=mlb'
+batter_log_stats = ["date_game", "opp_ID", "AB", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SO"]  # derive AVG
+pitcher_log_stats = ["date_game", "opp_ID", "player_game_result", "IP", "H", "R", "ER", "BB", "SO", "pitches"]  # derive ERA
 pitcher_stats = ["player", "", "IP", "H", "R", "ER", "BB", "SO", "pitches"]
 batter_stats_good = ["player", "PA", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SB"]
 batter_stats_bad = ["player", "PA", "H", "BB", "SO", "GIDP", "CS"]
@@ -18,6 +22,7 @@ pitcher_display = ["NAME"] + pitcher_stats[1:-1] + ["#P"]
 
 # try to fetch player by first and last name
 # if can't find with first name, search by last name, then re-search results for matching first name? (T.J. McFarland)
+
 
 class SportsClient(discord.Client):
     
@@ -28,14 +33,14 @@ class SportsClient(discord.Client):
                 try:
                     name = message.content.split()[1:]
                     first = name[0]
-                    last = " ".join(name[1:])#hopefully handles the Jrs
+                    last = " ".join(name[1:])  # hopefully handles the Jrs
                     if not first or not last:
                         raise ValueError('A first and last name must be provided')
-                    blurb = fetch_blurb(first,last)
-                    embedded_blurb = discord.Embed(title=" ".join([first,last]).title(),description=blurb)
-                    yield from self.send_message(message.channel,embed=embedded_blurb)
+                    blurb = fetch_blurb(first, last)
+                    embedded_blurb = discord.Embed(title=" ".join([first, last]).title(), description=blurb)
+                    yield from self.send_message(message.channel, embed=embedded_blurb)
                 except NoResultsError as ex:
-                    yield from self.send_message(message.channel,content=ex.message)
+                    yield from self.send_message(message.channel, content=ex.message)
 
 
 def fetch_blurb(first, last, player_url=None):
@@ -72,21 +77,89 @@ def fetch_blurb(first, last, player_url=None):
     
     # if only one result, I think it just redirects? test this one first with "pollock"
 
-#just better to do a search and find the best matching result
-def fetch_player_stats(search):
-    quoted = urllib.parse.quote(search)
-    print(quoted)
-    response = get(search_url.format(search=quoted))
-    print(response.text.encode('utf-8'))
-    #happy path:
-    #get 'p' with class "listhead" and content "Batting Game Logs"
-    #grab href of 'a' within 'l' that has matching year as content (or just the last one in the list? probably better that way)
-    #append to bbreff root, get response
-    #in response, get div with id all_batting_gamelogs, then get table body within, pick last cell for most recent game
-    #within that row, similar logic looking for "data-stat" per a list of categories
+
+# just better to do a search and find the best matching result
+# maybe add specific date functionality eventually?
+def fetch_player_stats(search, stat_type=None, player_url=None):
+    response = get(player_url if player_url else search_url.format(search=urllib.parse.quote(search)))
+    soup = BeautifulSoup(response.text, 'html.parser')
+    log_holder = soup.find('span', text="Game Logs")
+    if log_holder:
+        name = soup.find('h1', attrs={'itemprop':'name'}).text
+        batting = None if (stat_type and stat_type != "b") else log_holder.find_next('div').find('p', class_='listhead', text='Batting')
+        pitching = None if (stat_type and stat_type != "p") else log_holder.find_next('div').find('p', class_='listhead', text='Pitching')
+        if batting or pitching:
+            batting_list = [] if not batting else batting.find_next('ul').findChildren(lambda tag:tag.name == 'a' and tag.text != 'Postseason')
+            pitching_list = [] if not pitching else pitching.find_next('ul').findChildren(lambda tag:tag.name == 'a' and tag.text != 'Postseason')
+            if len(batting_list) > len(pitching_list):
+                href = batting_list.pop().get('href')
+                return print_most_recent_game(name, bbref_url + href, 'b',)
+                # grab batting logs
+            elif len(pitching_list) > len(batting_list):
+                href = pitching_list.pop().get('href')
+                return print_most_recent_game(name, bbref_url + href, 'p')
+                # grab pitching logs
+            elif len(batting_list) == len(pitching_list):
+                # ask to disambiguate
+                raise ValueError("Equal number of years of recorded batting and pitching logs. Try disambiguating with `/logb` for batting and `/logp` for pitching")
+            else:
+                raise ValueError("Not sure what happened, landed in a player page without accessible game logs [%s]" % search)
+        else:
+            if stat_type == "b":
+                raise NoResultsError("No batting stats for %s" % search)
+            elif stat_type == "p":
+                raise NoResultsError("No pitching stats for %s" % search)
+        
+    elif soup.findChild('div', class_='search-results'):
+        href = soup.find('div', attrs={"id":"players"}).find_next('div', class_='search-item-url').text
+        return fetch_player_stats(search, stat_type, bbref_url + href)
+    else:
+        raise NoResultsError("No results for %s" % search)
+
     
-    #search results page
-    
+def print_most_recent_game(name, gamelog_url, player_type):
+    response = get(gamelog_url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    tag_id = 'batting_gamelogs' if player_type == 'b' else 'pitching_gamelogs'
+    table = soup.find('table', attrs={'id':tag_id}).find('tbody').find_all('tr')
+    most_recent = table.pop()
+    cat_dict = {}
+    # index the stats
+    if player_type == 'b':
+        for category in most_recent.find_all('td'):
+            stat = category.get('data-stat')
+            if stat in batter_log_stats:
+                if stat == "date_game":
+                    val = category.get('csk').split(".")[0]
+                    cat_dict["DATE"] = val
+                elif stat == "opp_ID":
+                    val = category.findChild('a').text
+                    cat_dict["VS"] = val
+                else: cat_dict[stat] = category.text
+        HAB = cat_dict['H'] + "/" + cat_dict['AB']
+        AVG = ("%.3f" % round(int(cat_dict['H']) / int(cat_dict['AB']), 3)).lstrip('0')
+        cat_dict['AVG'] = AVG + (" (%s)" % HAB)
+    else:
+        for category in most_recent.find_all('td'):
+            stat = category.get('data-stat')
+            if stat in pitcher_log_stats:
+                if stat == "date_game":
+                    val = category.get('csk').split(".")[0]
+                    cat_dict["DATE"] = val
+                elif stat == "opp_ID":
+                    val = category.findChild('a').text
+                    cat_dict["VS"] = val
+                elif stat == "player_game_result":
+                    val = "N/A" if not category.text else category.text
+                    cat_dict["DEC"] = val
+                else: cat_dict[stat] = category.text
+        ERA = str(round((9 * (int(cat_dict['ER']) / float(cat_dict['IP']))), 2))
+        WHIP = str(round(((int(cat_dict['BB']) + int(cat_dict['H']))) / float(cat_dict['IP']), 2))
+        cat_dict["ERA"] = ERA
+        cat_dict["WHIP"] = WHIP
+    print(name)
+    print(cat_dict)
+
 
 # TODO return date, opponent, make top x configurable
 def fetch_daily_stats(player_type, stats, dates='yesterday'):
@@ -153,6 +226,8 @@ class NoResultsError(Exception):
         super().__init__(message)
         self.message = message
 
+
+fetch_player_stats("Grandal", stat_type="b")
 # testing\
 # TOKEN = json.loads(open('../token.json','r').read())["APP_TOKEN"]
 # client = SportsClient()
