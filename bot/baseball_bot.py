@@ -20,9 +20,13 @@ pitcher_stats = ["player", "", "IP", "H", "R", "ER", "BB", "SO", "pitches"]
 batter_stats_good = ["player", "PA", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SB"]
 batter_stats_bad = ["player", "PA", "H", "BB", "SO", "GIDP", "CS"]
 pitcher_display = ["NAME"] + pitcher_stats[1:-1] + ["#P"]
+PITCHER = 'p'
+BATTER = 'b'
 
-# try to fetch player by first and last name
-# if can't find with first name, search by last name, then re-search results for matching first name? (T.J. McFarland)
+''' TODO 5/17:
+    Season stats
+    top x, bottom x for today, given day
+'''
 
 
 class SportsClient(discord.Client):
@@ -106,25 +110,25 @@ def fetch_player_stats(search, stat_type=None, player_url=None, date=None, last_
     if log_holder:
         name_node = soup.find('h1', attrs={'itemprop':'name'})
         name = name_node.text
-        is_pitcher = "Pitcher" in name_node.find_next('p').text  # next element after name contains positions
-        batting = None if ((stat_type and stat_type != "b") or is_pitcher) else log_holder.find_next('div').find('p', class_='listhead', text='Batting')
-        pitching = None if ((stat_type and stat_type != "p") or not is_pitcher) else log_holder.find_next('div').find('p', class_='listhead', text='Pitching')
+        is_pitcher = "Pitcher" in name_node.find_next(PITCHER).text  # next element after name contains positions
+        batting = None if ((stat_type and stat_type != BATTER) or is_pitcher) else log_holder.find_next('div').find(PITCHER, class_='listhead', text='Batting')
+        pitching = None if ((stat_type and stat_type != PITCHER) or not is_pitcher) else log_holder.find_next('div').find(PITCHER, class_='listhead', text='Pitching')
         if batting or pitching:
             batting_list = None if not batting else batting.find_next('ul').findChildren(lambda tag:tag.name == 'a' and tag.text != 'Postseason')
             pitching_list = None if not pitching else pitching.find_next('ul').findChildren(lambda tag:tag.name == 'a' and tag.text != 'Postseason')
             if batting:
                 href = batting_list.pop().get('href')
-                return parse_player_stats(name, bbref_url + href, 'b', date, last_days, date_range)
+                return parse_player_stats(name, bbref_url + href, BATTER, date, last_days, date_range)
                 # grab batting logs
             elif pitching:
                 href = pitching_list.pop().get('href')
-                return parse_player_stats(name, bbref_url + href, 'p', date, last_days, date_range)
+                return parse_player_stats(name, bbref_url + href, PITCHER, date, last_days, date_range)
             else:
                 raise ValueError("Not sure what happened, landed in a player page without accessible game logs [%s]" % search)
         else:
-            if stat_type == "b":
+            if stat_type == BATTER:
                 raise NoResultsError("No batting stats for %s" % name)
-            elif stat_type == "p":
+            elif stat_type == PITCHER:
                 raise NoResultsError("No pitching stats for %s" % name)
         
     elif soup.findChild('div', class_='search-results'):
@@ -137,7 +141,7 @@ def fetch_player_stats(search, stat_type=None, player_url=None, date=None, last_
 def parse_player_stats(name, gamelog_url, player_type, date=None, last_days=None, date_range=None):
     response = get(gamelog_url)
     soup = BeautifulSoup(response.text, 'html.parser')
-    tag_id = 'batting_gamelogs' if player_type == 'b' else 'pitching_gamelogs'
+    tag_id = 'batting_gamelogs' if player_type == BATTER else 'pitching_gamelogs'
     table = []
     if last_days or date:
         end_date = datetime.date.today()
@@ -176,7 +180,7 @@ def format_player_stats(name, player_type, stat_map, date_range):
         title = "**%s** from **%s** through **%s**" % (name, date_range[0], date_range[1])
         
     if date_range: body += display('GP', stat_map)
-    if player_type == 'p':
+    if player_type == PITCHER:
         if not date_range: body += display('DEC', stat_map)
         body += display('IP', stat_map)
         body += display('H', stat_map)
@@ -209,7 +213,7 @@ def display(key, stats, override=None):
     
 def rollup_game_row(row, player_type, stat_map):
     stat_map['GP'] = stat_map.get('GP', 0) + 1
-    if player_type == 'b':
+    if player_type == BATTER:
         for category in row.find_all('td'):
             stat = category.get('data-stat')
             if stat in batter_log_stats:
@@ -256,7 +260,7 @@ def fetch_daily_stats(player_type, stats, dates='yesterday'):
     for row in table[1:]:
         if not row.get('class', []):
             cells = row.findChildren('td')
-            if player_type == 'p':
+            if player_type == PITCHER:
                 started = row.find('td', attrs={'data-stat':"GS"}).text == '1'
                 if started:
                     vals = []
@@ -273,7 +277,7 @@ def fetch_daily_stats(player_type, stats, dates='yesterday'):
                                 vals.append(dc)
                             vals.append(val)
                     pair_list.append(vals)
-            elif player_type == 'b':
+            elif player_type == BATTER:
                 vals = []
                 for cell in cells:
                     title = cell.get('data-stat')
