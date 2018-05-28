@@ -14,8 +14,8 @@ bbref_url = 'https://www.baseball-reference.com'
 stats_url = bbref_url + '/leagues/daily.fcgi?request=1&type={type}&dates={dates}&level=mlb'
 search_url = bbref_url + '/search/search.fcgi?search={search}'
 blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={first}+{last}&sport=mlb'
-batter_log_stats = ["date_game", "opp_ID", "AB", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SO"]  # derive AVG
-pitcher_log_stats = ["date_game", "opp_ID", "player_game_result", "IP", "H", "R", "ER", "BB", "SO", "pitches"]  # derive ERA
+batter_log_stats = ["date_game", "opp_ID", "AB", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SO", "batting_avg", "onbase_perc", "slugging_perc", "onbase_plus_slugging"]  # derive AVG
+pitcher_log_stats = ["date_game", "opp_ID", "player_game_result", "IP", "H", "R", "ER", "BB", "SO", "pitches", "GS", "W", "L", "SV", "earned_run_avg", "whip"]  # derive ERA
 pitcher_stats = ["player", "", "IP", "H", "R", "ER", "BB", "SO", "pitches"]
 batter_stats_good = ["player", "PA", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SB"]
 batter_stats_bad = ["player", "PA", "H", "BB", "SO", "GIDP", "CS"]
@@ -24,7 +24,7 @@ PITCHER = 'p'
 BATTER = 'b'
 
 ''' TODO 5/17:
-    Season stats
+    Try streaming responses for player pages, they may be too large
     top x, bottom x for today, given day
 '''
 
@@ -54,14 +54,24 @@ class SportsClient(discord.Client):
                         raise ValueError('A number of last days must be provided')
                     if(len(msg) < 2):
                         raise ValueError('Must provide both a number of days and a name')
-                    embedded_stats = fetch_player_stats(" ".join(msg[1:]), last_days=days)
+                    embedded_stats = get_log(" ".join(msg[1:]), last_days=days)
                     yield from self.send_message(message.channel, embed=embedded_stats)
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
             if(message.content.startswith('/log')):
                 try:
                     search = " ".join(message.content.split()[1:])
-                    embedded_stats = fetch_player_stats(search)
+                    embedded_stats = get_log(search)
+                    yield from self.send_message(message.channel, embed=embedded_stats)
+                except Exception as ex:
+                    yield from self.send_message(message.channel, content=str(ex))
+            if(message.content.startswith('/season')):
+                msg = message.content.split()[1:]
+                try:
+                    if msg[0].isdigit():
+                        embedded_stats = get_log(" ".join(msg[1:]), season=True, season_year=msg[0])
+                    else:
+                        embedded_stats = get_log(" ".join(msg), season=True)
                     yield from self.send_message(message.channel, embed=embedded_stats)
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
@@ -103,13 +113,23 @@ def fetch_blurb(first, last, player_url=None):
 
 # just better to do a search and find the best matching result
 # maybe add specific date functionality eventually?
-def fetch_player_stats(search, stat_type=None, player_url=None, date=None, last_days=None, date_range=None):
+def get_log(search, stat_type=None, player_url=None, date=None, last_days=None, date_range=None, season=False, season_year=None, most_recent=True):
     response = get(player_url if player_url else search_url.format(search=urllib.parse.quote(search)))
     soup = BeautifulSoup(response.text, 'html.parser')
     log_holder = soup.find('span', text="Game Logs")
+    
     if log_holder:
         name_node = soup.find('h1', attrs={'itemprop':'name'})
         name = name_node.text
+        if last_days:
+            end_date = datetime.date.today()
+            start_date = end_date - datetime.timedelta(days=last_days)
+            date_range = (start_date, end_date)
+        elif date:
+            date_range = (date)
+        elif season:
+            player_type = PITCHER if "Pitcher" in name_node.find_next('p').text else BATTER
+            return get_player_summary(name, response, player_type, None, season, season_year, False)
         is_pitcher = "Pitcher" in name_node.find_next(PITCHER).text  # next element after name contains positions
         batting = None if ((stat_type and stat_type != BATTER) or is_pitcher) else log_holder.find_next('div').find(PITCHER, class_='listhead', text='Batting')
         pitching = None if ((stat_type and stat_type != PITCHER) or not is_pitcher) else log_holder.find_next('div').find(PITCHER, class_='listhead', text='Pitching')
@@ -118,11 +138,11 @@ def fetch_player_stats(search, stat_type=None, player_url=None, date=None, last_
             pitching_list = None if not pitching else pitching.find_next('ul').findChildren(lambda tag:tag.name == 'a' and tag.text != 'Postseason')
             if batting:
                 href = batting_list.pop().get('href')
-                return parse_player_stats(name, bbref_url + href, BATTER, date, last_days, date_range)
+                return get_player_summary(name, get(bbref_url + href), BATTER, date_range=date_range, most_recent=most_recent)
                 # grab batting logs
             elif pitching:
                 href = pitching_list.pop().get('href')
-                return parse_player_stats(name, bbref_url + href, PITCHER, date, last_days, date_range)
+                return get_player_summary(name, get(bbref_url + href), PITCHER, date_range=date_range, most_recent=most_recent)
             else:
                 raise ValueError("Not sure what happened, landed in a player page without accessible game logs [%s]" % search)
         else:
@@ -132,86 +152,74 @@ def fetch_player_stats(search, stat_type=None, player_url=None, date=None, last_
                 raise NoResultsError("No pitching stats for %s" % name)
         
     elif soup.findChild('div', class_='search-results'):
-        href = soup.find('div', attrs={"id":"players"}).find_next('div', class_='search-item-url').text
-        return fetch_player_stats(search, stat_type, bbref_url + href, date, last_days, date_range)
+        mlb_players = soup.find('div', attrs={"id":"players"})
+        if mlb_players:
+            href = mlb_players.find_next('div', class_='search-item-url').text
+            return get_log(search, stat_type, bbref_url + href, date, last_days, date_range, season, season_year, most_recent)
+        else: raise NoResultsError("No MLB results for %s" % search)
     else:
         raise NoResultsError("No results for %s" % search)
 
-    
-def parse_player_stats(name, gamelog_url, player_type, date=None, last_days=None, date_range=None):
-    response = get(gamelog_url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    tag_id = 'batting_gamelogs' if player_type == BATTER else 'pitching_gamelogs'
+
+# should be given a row of either game logs or season logs
+# given a table of game data, aggregate according to parameters and return a string
+def get_player_summary(name, response, player_type, date_range=None, season=False, season_year=None, most_recent=True):
+    # if season, get season gamelogs
+    # else get gamelogs
     table = []
-    if last_days or date:
-        end_date = datetime.date.today()
-        start_date = end_date - datetime.timedelta(days=last_days)
-        date_range = (start_date, end_date)
-        # filters the list of game rows down to those matching the date range
-        table = soup.find('table', attrs={'id':tag_id}).find('tbody').findChildren(
-            lambda tag:tag.name == 'tr' and not tag.get('class') == 'thead' and tag.findChild(
-                lambda tag:tag.name == "td" and tag['data-stat'] == 'date_game'
-                and ((start_date <= dt.strptime(tag.get('csk').split(".")[0], "%Y-%m-%d").date() <= end_date) if not date 
-                     else (dt.strptime(tag.get('csk').split(".")[0], "%Y-%m-%d").date() == dt.strptime(date, "%Y-%m-%d").date()))))
+    if season:
+        table = [get_season_table(name, response, player_type, season_year).pop()]
+        season_year = table[0].get('id').split('.')[1]
     else:
-        table = [soup.find('table', attrs={'id':tag_id}).find('tbody').find_all('tr').pop()]
-    if not table:
-        if date:
-            raise NoResultsError("No results for %s on %s" % (name, date))
-        else:
-            raise NoResultsError("No results for %s from %s to %s" % (name, start_date, end_date))
-        # check if today >= date >= today - end_date
-    # if last_days, do a lambda to include the last days worth of table rows:
-    # for each row that has a child with date_game data stat and the csk split value within the range
-#     most_recent = table.pop()
+        table = get_gamelog_table(name, response, player_type, date_range, most_recent)
     cat_dict = {}
     # index the stats
     for row in table:
-        rollup_game_row(row, player_type, cat_dict)
-    return format_player_stats(name, player_type, cat_dict, date_range)
+        index_game_row(row, player_type, cat_dict)
+    return format_player_stats(name, player_type, cat_dict, date_range, season_year)
 
-    
-def format_player_stats(name, player_type, stat_map, date_range):
-    title = ""
-    body = ""
-    if not date_range:
-        title = "**%s** on **%s** vs **%s**" % (name, stat_map['DATE'], stat_map['VS'])
+
+def get_gamelog_table(name, response, player_type, date_range=None, most_recent=True):
+    soup = BeautifulSoup(response.text, 'html.parser')
+    tag_id = 'batting_gamelogs' if player_type == BATTER else 'pitching_gamelogs'
+    table = []
+    if date_range:
+        # filters the list of game rows down to those matching the date range
+        table = soup.find('table', attrs={'id':tag_id}).find('tbody').findChildren(
+            lambda tag:tag.name == 'tr' and not 'thead' in tag.get('class') and tag.findChild(
+                lambda tag:tag.name == "td" and tag['data-stat'] == 'date_game'
+                and ((date_range[0] <= dt.strptime(tag.get('csk').split(".")[0], "%Y-%m-%d").date() <= date_range[1]) if len(date_range) > 1 
+                     else (dt.strptime(tag.get('csk').split(".")[0], "%Y-%m-%d").date() == dt.strptime(date_range[1], "%Y-%m-%d").date()))))
+        if not table:
+            if len(date_range) == 1:
+                raise NoResultsError("No results for %s on %s" % (name, date_range[0]))
+            else:
+                raise NoResultsError("No results for %s from %s to %s" % (name, date_range[0], date_range[1]))
+    elif most_recent:
+        table = [soup.find('table', attrs={'id':tag_id}).find('tbody').find_all('tr').pop()]
+        if not table:
+            raise NoResultsError("No results for %s" % name)
     else:
-        title = "**%s** from **%s** through **%s**" % (name, date_range[0], date_range[1])
-        
-    if date_range: body += display('GP', stat_map)
-    if player_type == PITCHER:
-        if not date_range: body += display('DEC', stat_map)
-        body += display('IP', stat_map)
-        body += display('H', stat_map)
-        body += display('R', stat_map)
-        body += display('ER', stat_map)
-        body += display('BB', stat_map)
-        body += display('SO', stat_map)
-        body += display('ERA', stat_map)
-        body += display('WHIP', stat_map)
-        body += display('pitches', stat_map, "#PITCH")
-    else:
-        body += display('AVG', stat_map)
-        body += display('R', stat_map)
-        body += display('2B', stat_map)
-        body += display('3B', stat_map)
-        body += display('HR', stat_map)
-        body += display('RBI', stat_map)
-        body += display('BB', stat_map)
-        body += display('SO', stat_map)
-    return discord.Embed(title=title, description=body)
-    # if just one day, title should be:
-    # "Stats for <Name> on <Date> vs <OPP>
-    # if multi days, title should be:
-    # "Stats for <Name> from <start> thru <end>
+        raise ValueError("Either most_recent or date_range must be valid")
+    return table
 
 
-def display(key, stats, override=None):
-    return "**" + (key if not override else override) + ':** ' + str(stats[key]) + "\n"
+# returns a tuple of the year mapped to the table cont
+def get_season_table(name, response, player_type, year=None):
+    soup = BeautifulSoup(response.text, 'html.parser')
+    tag_id = 'batting_standard' if player_type == BATTER else 'pitching_standard'
+    print(len(soup.find_all('table')))
+    table = soup.find('table', attrs={'id':tag_id}).find('tbody').findChildren(
+        lambda tag:tag.name == 'tr' and 'full' in tag.get('class') and ((tag.get('id').split('.')[1] == str(year)) if year else True))
+    if not table:
+        if year:
+            raise NoResultsError("No results for %s in %s" % (name, year))
+        else:
+            raise NoResultsError("No results for %s" % name)
+    return table
 
-    
-def rollup_game_row(row, player_type, stat_map):
+
+def index_game_row(row, player_type, stat_map):
     stat_map['GP'] = stat_map.get('GP', 0) + 1
     if player_type == BATTER:
         for category in row.find_all('td'):
@@ -223,6 +231,8 @@ def rollup_game_row(row, player_type, stat_map):
                 elif stat == "opp_ID":
                     val = category.findChild('a').text
                     stat_map['VS'] = val
+                elif stat in ["batting_avg", "onbase_perc", "slugging_perc", "onbase_plus_slugging"]:
+                    stat_map[stat] = category.text
                 else: stat_map[stat] = stat_map.get(stat, 0) + int(category.text)
         HAB = str(stat_map['H']) + "/" + str(stat_map['AB'])
         AVG = ".000" if stat_map['AB'] == '0' else ("%.3f" % round(int(stat_map['H']) / int(stat_map['AB']), 3)).lstrip('0')
@@ -240,11 +250,73 @@ def rollup_game_row(row, player_type, stat_map):
                 elif stat == "player_game_result":
                     val = "N/A" if not category.text else category.text
                     stat_map["DEC"] = val
+                elif stat in ["earned_run_avg", "whip"]:
+                    stat_map[stat] = category.text
                 else: stat_map[stat] = stat_map.get(stat, 0) + (int(category.text) if not stat == 'IP' else float(category.text))
-        ERA = "0.00" if stat_map['IP'] == '0' else '{0:.2f}'.format(round((9 * (int(stat_map['ER']) / float(stat_map['IP']))), 3))
-        WHIP = "0.00" if stat_map['IP'] == '0' else '{0:.2f}'.format(round(((int(stat_map['BB']) + int(stat_map['H']))) / float(stat_map['IP']), 3))
+        ERA = "0.00" if stat_map['IP'] == '0' else '{0:.2f}'.format(round((9.0 * (float(stat_map['ER']) / float(stat_map['IP']))), 3))
+        WHIP = "0.00" if stat_map['IP'] == '0' else '{0:.2f}'.format(round(((float(stat_map['BB']) + float(stat_map['H']))) / float(stat_map['IP']), 3))
         stat_map['ERA'] = ERA
         stat_map['WHIP'] = WHIP
+
+
+# given a name and a map of categories to values, return a formatted string
+def format_player_stats(name, player_type, stat_map, date_range, season_year=None):
+    title = ""
+    body = ""
+    if season_year:
+        title = "%s in %s" % (name, season_year)
+    elif not date_range:
+        title = "%s on %s vs %s" % (name, stat_map['DATE'], stat_map['VS'])
+    else:
+        title = "%s from %s through %s" % (name, date_range[0], date_range[1])
+        
+    if date_range: body += display('GP', stat_map)
+    if player_type == PITCHER:
+        if not date_range and not season_year: body += display('DEC', stat_map)
+        if stat_map['GS'] and stat_map['GS'] != '0': body += display('GS', stat_map)
+        if season_year:
+            body += display('W', stat_map)
+            body += display('L', stat_map)
+            if stat_map['SV'] and stat_map['SV'] != '0': body += display('SV', stat_map)
+        body += display('IP', stat_map)
+        body += display('H', stat_map)
+        body += display('R', stat_map)
+        body += display('ER', stat_map)
+        body += display('BB', stat_map)
+        body += display('SO', stat_map)
+        if season_year:
+            body += display('earned_run_avg', stat_map, "ERA")
+            body += display('whip', stat_map, "WHIP")
+        else:
+            body += display('ERA', stat_map)
+            body += display('WHIP', stat_map)
+        if not season_year: body += display('pitches', stat_map, "#PITCH")
+    else:
+        if season_year:
+            body += "**" + 'AVG' + ':** ' + str(stat_map['batting_avg']) + (" (%s/%s)" % (stat_map['H'], stat_map['AB'])) + "\n"
+            body += display("onbase_perc", stat_map, "OBP")
+            body += display("slugging_perc", stat_map, "SLG")
+            body += display("onbase_plus_slugging", stat_map, "OPS")
+        else: body += display('AVG', stat_map)
+        body += display('R', stat_map)
+        body += display('2B', stat_map)
+        body += display('3B', stat_map)
+        body += display('HR', stat_map)
+        body += display('RBI', stat_map)
+        body += display('BB', stat_map)
+        body += display('SO', stat_map)
+#     print(title + "\n")
+#     print(body)
+    return discord.Embed(title=title, description=body)
+    # if just one day, title should be:
+    # "Stats for <Name> on <Date> vs <OPP>
+    # if multi days, title should be:
+    # "Stats for <Name> from <start> thru <end>
+
+
+def display(key, stats, override=None):
+    if key in stats:
+        return "**" + (key if not override else override) + ':** ' + str(stats[key]) + "\n"
 
 
 # TODO return date, opponent, make top x configurable
@@ -313,11 +385,11 @@ class NoResultsError(Exception):
         self.message = message
 
 
-# fetch_player_stats("Joe Kelly")
+get_log("Babe", season=True)
 # testing\
-TOKEN = json.loads(open('../token.json', 'r').read())["APP_TOKEN"]
-client = SportsClient()
-client.run(TOKEN)
+# TOKEN = json.loads(open('../token.json', 'r').read())["APP_TOKEN"]
+# client = SportsClient()
+# client.run(TOKEN)
 # fetch_blurb("JD", "Martinez")
 # best_pitchers()
 # print("\n")
