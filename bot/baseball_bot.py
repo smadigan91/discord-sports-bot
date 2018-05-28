@@ -33,8 +33,8 @@ class SportsClient(discord.Client):
     
     @asyncio.coroutine
     def on_message(self, message):
-        if(message.channel.name == "sportsbot-testing"):
-            if(message.content.startswith('/blurb')):
+        if message.channel.name == "sportsbot-testing":
+            if message.content.startswith('/blurb'):
                 msg = message.content.split()[1:]
                 try:
                     first = msg[0]
@@ -46,26 +46,26 @@ class SportsClient(discord.Client):
                     yield from self.send_message(message.channel, embed=embedded_blurb)
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
-            if(message.content.startswith('/last')):
+            if message.content.startswith('/last'):
                 msg = message.content.split()[1:]
                 try:
                     days = int(msg[0])
                     if not days:
                         raise ValueError('A number of last days must be provided')
-                    if(len(msg) < 2):
+                    if len(msg) < 2:
                         raise ValueError('Must provide both a number of days and a name')
                     embedded_stats = get_log(" ".join(msg[1:]), last_days=days)
                     yield from self.send_message(message.channel, embed=embedded_stats)
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
-            if(message.content.startswith('/log')):
+            if message.content.startswith('/log'):
                 try:
                     search = " ".join(message.content.split()[1:])
                     embedded_stats = get_log(search)
                     yield from self.send_message(message.channel, embed=embedded_stats)
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
-            if(message.content.startswith('/season')):
+            if message.content.startswith('/season'):
                 msg = message.content.split()[1:]
                 try:
                     if msg[0].isdigit():
