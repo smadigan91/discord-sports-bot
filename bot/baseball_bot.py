@@ -128,11 +128,12 @@ def get_log(search, stat_type=None, player_url=None, date=None, last_days=None, 
         elif date:
             date_range = (date)
         elif season:
-            player_type = PITCHER if "Pitcher" in name_node.find_next('p').text else BATTER
+            positions = name_node.find_next('p').text.split()
+            player_type = PITCHER if "Pitcher" in positions and len(positions) <= 2 else BATTER
             return get_player_summary(name, response, player_type, None, season, season_year, False)
-        is_pitcher = "Pitcher" in name_node.find_next(PITCHER).text  # next element after name contains positions
-        batting = None if ((stat_type and stat_type != BATTER) or is_pitcher) else log_holder.find_next('div').find(PITCHER, class_='listhead', text='Batting')
-        pitching = None if ((stat_type and stat_type != PITCHER) or not is_pitcher) else log_holder.find_next('div').find(PITCHER, class_='listhead', text='Pitching')
+        is_pitcher = "Pitcher" in name_node.find_next('p').text  # next element after name contains positions
+        batting = None if ((stat_type and stat_type != BATTER) or is_pitcher) else log_holder.find_next('div').find('p', class_='listhead', text='Batting')
+        pitching = None if ((stat_type and stat_type != PITCHER) or not is_pitcher) else log_holder.find_next('div').find('p', class_='listhead', text='Pitching')
         if batting or pitching:
             batting_list = None if not batting else batting.find_next('ul').findChildren(lambda tag:tag.name == 'a' and tag.text != 'Postseason')
             pitching_list = None if not pitching else pitching.find_next('ul').findChildren(lambda tag:tag.name == 'a' and tag.text != 'Postseason')
@@ -208,7 +209,6 @@ def get_gamelog_table(name, response, player_type, date_range=None, most_recent=
 def get_season_table(name, response, player_type, year=None):
     soup = BeautifulSoup(response.text, 'html.parser')
     tag_id = 'batting_standard' if player_type == BATTER else 'pitching_standard'
-    print(len(soup.find_all('table')))
     table = soup.find('table', attrs={'id':tag_id}).find('tbody').findChildren(
         lambda tag:tag.name == 'tr' and 'full' in tag.get('class') and ((tag.get('id').split('.')[1] == str(year)) if year else True))
     if not table:
@@ -385,7 +385,7 @@ class NoResultsError(Exception):
         self.message = message
 
 
-get_log("Babe", season=True)
+get_log("Shohei", stat_type=PITCHER, season=True)
 # testing\
 # TOKEN = json.loads(open('../token.json', 'r').read())["APP_TOKEN"]
 # client = SportsClient()
