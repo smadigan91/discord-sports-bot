@@ -15,7 +15,7 @@ bbref_url = 'https://www.baseball-reference.com'
 stats_url = bbref_url + '/leagues/daily.fcgi?request=1&type={type}&dates={dates}&level=mlb'
 search_url = bbref_url + '/search/search.fcgi?search={search}'
 blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={first}+{last}&sport=mlb'
-batter_log_stats = ["date_game", "opp_ID", "AB", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SO", "batting_avg", "onbase_perc", "slugging_perc", "onbase_plus_slugging"]  # derive AVG
+batter_log_stats = ["date_game", "opp_ID", "AB", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SO", "SB", "batting_avg", "onbase_perc", "slugging_perc", "onbase_plus_slugging"]  # derive AVG
 pitcher_log_stats = ["date_game", "opp_ID", "player_game_result", "IP", "H", "R", "ER", "BB", "SO", "pitches", "GS", "W", "L", "SV", "earned_run_avg", "whip"]  # derive ERA
 pitcher_stats = ["player", "", "IP", "H", "R", "ER", "BB", "SO", "pitches"]
 batter_stats_good = ["player", "PA", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SB"]
@@ -305,6 +305,7 @@ def format_player_stats(name, player_type, stat_map, date_range, season_year=Non
         body += display('HR', stat_map)
         body += display('RBI', stat_map)
         body += display('BB', stat_map)
+        body += display('SB', stat_map)
         body += display('SO', stat_map)
 #     print(title + "\n")
 #     print(body)
