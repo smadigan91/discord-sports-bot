@@ -2,7 +2,8 @@ import asyncio
 from datetime import datetime as dt
 import datetime
 from difflib import SequenceMatcher
-import json
+# import json
+import os
 import urllib
 
 from bs4 import BeautifulSoup
@@ -386,9 +387,10 @@ class NoResultsError(Exception):
 
 
 if __name__ == "__main__":
-    TOKEN = json.loads(open('token.json', 'r').read())["APP_TOKEN"]
+    # token = json.loads(open('token.json', 'r').read())["APP_TOKEN"]
+    token = os.environ.get('TOKEN', '')
     client = SportsClient()
-    client.run(TOKEN)
+    client.run(token)
 
 
 # get_log("Shohei", stat_type=PITCHER, season=True)
