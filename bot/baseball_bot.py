@@ -255,7 +255,7 @@ def index_game_row(row, player_type, stat_map):
                     stat_map[stat] = category.text
                 else: stat_map[stat] = stat_map.get(stat, 0) + (int(category.text) if not stat == 'IP' else float(category.text))
         ERA = "0.00" if stat_map['IP'] == '0' else '{0:.2f}'.format(round((9.0 * (float(stat_map['ER']) / float(stat_map['IP']))), 3))
-        WHIP = "0.00" if stat_map['IP'] == '0' else '{0:.2f}'.format(round(((float(stat_map['BB']) + float(stat_map['H']))) / float(stat_map['IP']), 3))
+        WHIP = "0.00" if stat_map['IP'] == '0' else '{0:.2f}'.format(round((float(stat_map['BB']) + float(stat_map['H'])) / float(stat_map['IP']), 3))
         stat_map['ERA'] = ERA
         stat_map['WHIP'] = WHIP
 
@@ -274,7 +274,7 @@ def format_player_stats(name, player_type, stat_map, date_range, season_year=Non
     if date_range: body += display('GP', stat_map)
     if player_type == PITCHER:
         if not date_range and not season_year: body += display('DEC', stat_map)
-        if stat_map['GS'] and stat_map['GS'] != '0': body += display('GS', stat_map)
+        if 'GS' in stat_map and stat_map['GS'] != '0': body += display('GS', stat_map)
         if season_year:
             body += display('W', stat_map)
             body += display('L', stat_map)
@@ -388,10 +388,11 @@ class NoResultsError(Exception):
 
 
 if __name__ == "__main__":
+    get_log("Shane Greene")
     # token = json.loads(open('token.json', 'r').read())["APP_TOKEN"]
-    token = os.environ.get('TOKEN', '')
-    client = SportsClient()
-    client.run(token)
+    # token = os.environ.get('TOKEN', '')
+    # client = SportsClient()
+    # client.run(token)
 
 
 # get_log("Shohei", stat_type=PITCHER, season=True)
