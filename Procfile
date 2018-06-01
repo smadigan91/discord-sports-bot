@@ -1,1 +1,1 @@
-python bot/baseball_bot.py
+bot: python bot/baseball_bot.py
