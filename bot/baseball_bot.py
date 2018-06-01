@@ -388,11 +388,10 @@ class NoResultsError(Exception):
 
 
 if __name__ == "__main__":
-    get_log("Shane Greene")
     # token = json.loads(open('token.json', 'r').read())["APP_TOKEN"]
-    # token = os.environ.get('TOKEN', '')
-    # client = SportsClient()
-    # client.run(token)
+    token = os.environ.get('TOKEN', '')
+    client = SportsClient()
+    client.run(token)
 
 
 # get_log("Shohei", stat_type=PITCHER, season=True)
