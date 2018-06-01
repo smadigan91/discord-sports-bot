@@ -386,7 +386,7 @@ class NoResultsError(Exception):
 
 
 if __name__ == "__main__":
-    TOKEN = json.loads(open('../token.json', 'r').read())["APP_TOKEN"]
+    TOKEN = json.loads(open('token.json', 'r').read())["APP_TOKEN"]
     client = SportsClient()
     client.run(TOKEN)
 
