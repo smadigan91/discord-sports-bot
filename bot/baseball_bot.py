@@ -188,7 +188,7 @@ def get_gamelog_table(name, response, player_type, date_range=None, most_recent=
     if date_range:
         # filters the list of game rows down to those matching the date range
         table = soup.find('table', attrs={'id':tag_id}).find('tbody').findChildren(
-            lambda tag:tag.name == 'tr' and not 'thead' in tag.get('class') and tag.findChild(
+            lambda tag:tag.name == 'tr' and not 'thead' == tag.get('class') and tag.findChild(
                 lambda tag:tag.name == "td" and tag['data-stat'] == 'date_game'
                 and ((date_range[0] <= dt.strptime(tag.get('csk').split(".")[0], "%Y-%m-%d").date() <= date_range[1]) if len(date_range) > 1 
                      else (dt.strptime(tag.get('csk').split(".")[0], "%Y-%m-%d").date() == dt.strptime(date_range[1], "%Y-%m-%d").date()))))
