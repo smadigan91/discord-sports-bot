@@ -33,7 +33,7 @@ class SportsClient(discord.Client):
     
     @asyncio.coroutine
     def on_message(self, message):
-        if message.channel.name == "sportsbot-testing":
+        if message.channel.name in ["sportsbot-testing","baseball"]:
             if message.content.startswith('/blurb'):
                 msg = message.content.split()[1:]
                 try:
@@ -100,7 +100,7 @@ def fetch_blurb(first, last, player_url=None):
         news = soup.findChildren('div', class_='playernews')
         if news:
             name_div = soup.findChild('div', class_='playername')
-            name = name_div.findChild('h1').text.split('|')[0].strip()
+            # name = name_div.findChild('h1').text.split('|')[0].strip()
             recent_news = news[0]
             report = recent_news.find('div', class_='report')
             impact = recent_news.find('div', class_='impact')
@@ -385,11 +385,14 @@ class NoResultsError(Exception):
         self.message = message
 
 
-get_log("Shohei", stat_type=PITCHER, season=True)
+if __name__ == "__main__":
+    TOKEN = json.loads(open('../token.json', 'r').read())["APP_TOKEN"]
+    client = SportsClient()
+    client.run(TOKEN)
+
+
+# get_log("Shohei", stat_type=PITCHER, season=True)
 # testing\
-# TOKEN = json.loads(open('../token.json', 'r').read())["APP_TOKEN"]
-# client = SportsClient()
-# client.run(TOKEN)
 # fetch_blurb("JD", "Martinez")
 # best_pitchers()
 # print("\n")
