@@ -90,7 +90,7 @@ class SportsClient(discord.Client):
                     if msg[-1].isdigit():
                         index = msg[-1]
                         search = '+'.join(msg[:-1])
-                        highlight = get_highlight(search, index-1)
+                        highlight = get_highlight(search, int(index)-1)
                         yield from self.send_message(message.channel, content=response % highlight)
                     else:
                         highlight = get_highlight('+'.join(msg))
@@ -103,16 +103,16 @@ def get_highlight(search, index=0):
     response = json.loads(get(highlights_url.format(search=search)).text)
     urls = []
     for doc in response['docs']:
-        urls.append((doc['blurb'], doc['url']))
+        urls.append((doc['title'], doc['url']))
     try:
-        blurb = '**' + urls[index][0] + '**'
+        title = '**' + urls[index][0] + '**'
         video_url = urls[index][1]
     except IndexError:
         raise NoResultsError(f'No results for {search}')
     soup = BeautifulSoup(get(video_url).text, 'html.parser')
     video = soup.findChild(lambda tag: tag.name == 'meta' and tag.get('itemprop') == 'contentURL' and tag.get('content').endswith('.mp4')).get('content')
     if video:
-        return blurb, video
+        return title, video
     else:
         raise NoResultsError(f'Error parsing video url for {search}')
 
