@@ -433,6 +433,7 @@ def find(key, dictionary):
                 for result in find(key, d):
                     yield result
 
+
 class NoResultsError(Exception):
     # TODO just log a message in whatever channel
     message = None
@@ -444,10 +445,9 @@ class NoResultsError(Exception):
 
 if __name__ == "__main__":
     # token = json.loads(open('token.json', 'r').read())["APP_TOKEN"]
-    get_highlight('Paul')
-    # token = os.environ.get('TOKEN', '')
-    # client = SportsClient()
-    # client.run(token)
+    token = os.environ.get('TOKEN', '')
+    client = SportsClient()
+    client.run(token)
 
 
 # get_log("Shohei", stat_type=PITCHER, season=True)
