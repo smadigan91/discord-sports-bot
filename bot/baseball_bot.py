@@ -105,14 +105,14 @@ def get_highlight(search, index=0):
     for doc in response['docs']:
         urls.append((doc['blurb'], doc['url']))
     try:
-        blurb = urls[index][0]
+        blurb = '**' + urls[index][0] + '**'
         video_url = urls[index][1]
     except IndexError:
         raise NoResultsError(f'No results for {search}')
     soup = BeautifulSoup(get(video_url).text, 'html.parser')
     video = soup.findChild(lambda tag: tag.name == 'meta' and tag.get('itemprop') == 'contentURL' and tag.get('content').endswith('.mp4')).get('content')
     if video:
-        return video, blurb
+        return blurb, video
     else:
         raise NoResultsError(f'Error parsing video url for {search}')
 
