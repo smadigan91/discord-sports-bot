@@ -9,7 +9,6 @@ import urllib
 from bs4 import BeautifulSoup
 import discord
 from requests import get
-from tabulate import tabulate
 
 bbref_url = 'https://www.baseball-reference.com'
 stats_url = bbref_url + '/leagues/daily.fcgi?request=1&type={type}&dates={dates}&level=mlb'
@@ -364,76 +363,6 @@ def display(key, stats, override=None):
         return "**" + (key if not override else override) + ':** ' + str(stats[key]) + "\n"
 
 
-# TODO return date, opponent, make top x configurable
-def fetch_daily_stats(player_type, stats, dates='yesterday'):
-    response = get(stats_url.format(type=player_type, dates=dates))
-    soup = BeautifulSoup(response.text, 'html.parser')
-    tables = soup.findChildren('table')
-    if not tables:
-        raise NoResultsError("no results")
-    results = tables[0]
-    table = results.findChildren('tr')
-    pair_list = []
-    for row in table[1:]:
-        if not row.get('class', []):
-            cells = row.findChildren('td')
-            if player_type == PITCHER:
-                started = row.find('td', attrs={'data-stat':"GS"}).text == '1'
-                if started:
-                    vals = []
-                    dc = " "
-                    for cell in cells:
-                        title = cell.get('data-stat')
-                        if title == "W" and cell.text:
-                            dc = "W"
-                        elif title == "L" and cell.text:
-                            dc = "L"
-                        if title in stats:
-                            val = cell.text
-                            if title == "IP":
-                                vals.append(dc)
-                            vals.append(val)
-                    pair_list.append(vals)
-            elif player_type == BATTER:
-                vals = []
-                for cell in cells:
-                    title = cell.get('data-stat')
-                    if title in stats:
-                        vals.append(cell.text)
-                pair_list.append(vals)
-    return pair_list
-
-
-# playing with tabular output - it's not well-suited for discord sadly
-def best_pitchers():
-    print("Top 5 Pitching:\n" + tabulate(fetch_daily_stats("p", pitcher_stats)[:5], pitcher_display, tablefmt="grid"))
-
-
-def worst_pitchers():
-    print("Bottom 5 Pitching:\n" + tabulate(fetch_daily_stats("p", pitcher_stats)[:-6:-1], pitcher_display, tablefmt="grid"))
-
-    
-def best_batters():
-    print("Top 5 Batting:\n" + tabulate(fetch_daily_stats("b", batter_stats_good)[:5], ["NAME"] + batter_stats_good[1:], tablefmt="grid"))
-
-    
-def worst_batters():
-    print("Bottom 5 Batting:\n" + tabulate(fetch_daily_stats("b", batter_stats_bad)[:-6:-1], ["NAME"] + batter_stats_bad[1:], tablefmt="grid"))
-
-
-def find(key, dictionary):
-    for k, v in dictionary.items():
-        if k == key:
-            yield v
-        elif isinstance(v, dict):
-            for result in find(key, v):
-                yield result
-        elif isinstance(v, list):
-            for d in v:
-                for result in find(key, d):
-                    yield result
-
-
 class NoResultsError(Exception):
     # TODO just log a message in whatever channel
     message = None
@@ -448,15 +377,3 @@ if __name__ == "__main__":
     token = os.environ.get('TOKEN', '')
     client = SportsClient()
     client.run(token)
-
-
-# get_log("Shohei", stat_type=PITCHER, season=True)
-# testing\
-# fetch_blurb("JD", "Martinez")
-# best_pitchers()
-# print("\n")
-# worst_pitchers()
-# print("\n")
-# best_batters()
-# print("\n")
-# worst_batters()
