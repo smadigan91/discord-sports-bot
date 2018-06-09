@@ -89,11 +89,11 @@ class SportsClient(discord.Client):
                 try:
                     if msg[-1].isdigit():
                         index = msg[-1]
-                        search = '+'.join(msg[:-1].split())
+                        search = '+'.join(msg[:-1])
                         highlight = get_highlight(search, index-1)
                         yield from self.send_message(message.channel, content=response % highlight)
                     else:
-                        highlight = get_highlight('+'.join(msg.split()))
+                        highlight = get_highlight('+'.join(msg))
                         yield from self.send_message(message.channel, content=response % highlight)
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
