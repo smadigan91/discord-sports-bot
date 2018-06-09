@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime as dt
 import datetime
 from difflib import SequenceMatcher
-# import json
+import json
 import os
 import urllib
 
@@ -15,14 +15,16 @@ bbref_url = 'https://www.baseball-reference.com'
 stats_url = bbref_url + '/leagues/daily.fcgi?request=1&type={type}&dates={dates}&level=mlb'
 search_url = bbref_url + '/search/search.fcgi?search={search}'
 blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={first}+{last}&sport=mlb'
+highlights_url = 'https://search-api.mlb.com/svc/search/v2/mlb_global_sitesearch_en/query?q={search}%2B2&page=1&sort=new&type=video&hl=false&expand=image&listed=true'
 batter_log_stats = ["date_game", "opp_ID", "AB", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SO", "SB", "batting_avg", "onbase_perc", "slugging_perc", "onbase_plus_slugging"]  # derive AVG
 pitcher_log_stats = ["date_game", "opp_ID", "player_game_result", "IP", "H", "R", "ER", "BB", "SO", "pitches", "GS", "W", "L", "SV", "earned_run_avg", "whip"]  # derive ERA
 pitcher_stats = ["player", "", "IP", "H", "R", "ER", "BB", "SO", "pitches"]
 batter_stats_good = ["player", "PA", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SB"]
 batter_stats_bad = ["player", "PA", "H", "BB", "SO", "GIDP", "CS"]
 pitcher_display = ["NAME"] + pitcher_stats[1:-1] + ["#P"]
-PITCHER = 'p'
+PITCHER = 'p'  # need to be careful not to confuse this with searching for html elements
 BATTER = 'b'
+help_map = {}  # commands to descriptions, * designating required
 
 ''' TODO 5/17:
     Try streaming responses for player pages, they may be too large
@@ -34,7 +36,8 @@ class SportsClient(discord.Client):
     
     @asyncio.coroutine
     def on_message(self, message):
-        if message.channel.name in ["sportsbot-testing","baseball"]:
+        if message.channel.name in ["sportsbot-testing", "baseball"]:
+            # /blurb [firstname]* [lastname]*
             if message.content.startswith('/blurb'):
                 msg = message.content.split()[1:]
                 try:
@@ -42,11 +45,12 @@ class SportsClient(discord.Client):
                     last = " ".join(msg[1:])  # hopefully handles the Jrs
                     if not first or not last:
                         raise ValueError('A first and last name must be provided')
-                    blurb = fetch_blurb(first, last)
+                    blurb = get_blurb(first, last)
                     embedded_blurb = discord.Embed(title=" ".join([first, last]).title(), description=blurb)
                     yield from self.send_message(message.channel, embed=embedded_blurb)
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
+            # /last [num days]* [player]*
             if message.content.startswith('/last'):
                 msg = message.content.split()[1:]
                 try:
@@ -59,6 +63,7 @@ class SportsClient(discord.Client):
                     yield from self.send_message(message.channel, embed=embedded_stats)
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
+            # /log [player]*
             if message.content.startswith('/log'):
                 try:
                     search = " ".join(message.content.split()[1:])
@@ -66,19 +71,53 @@ class SportsClient(discord.Client):
                     yield from self.send_message(message.channel, embed=embedded_stats)
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
+            # /season [player]* [year]
             if message.content.startswith('/season'):
                 msg = message.content.split()[1:]
                 try:
-                    if msg[0].isdigit():
+                    if msg[-1].isdigit():
                         embedded_stats = get_log(" ".join(msg[1:]), season=True, season_year=msg[0])
                     else:
                         embedded_stats = get_log(" ".join(msg), season=True)
                     yield from self.send_message(message.channel, embed=embedded_stats)
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
+            # /highlight [player]* [index]
+            if message.content.startswith('/highlight'):
+                msg = message.content.split()[1:]
+                response = "\n%s\n%s"
+                try:
+                    if msg[-1].isdigit():
+                        index = msg[-1]
+                        search = msg[:-1].replace(' ', '+')
+                        highlight = get_highlight(search, index-1)
+                        yield from self.send_message(message.channel, content=response % highlight)
+                    else:
+                        highlight = get_highlight(msg.replace(' ', '+'))
+                        yield from self.send_message(message.channel, content=response % highlight)
+                except Exception as ex:
+                    yield from self.send_message(message.channel, content=str(ex))
 
 
-def fetch_blurb(first, last, player_url=None):
+def get_highlight(search, index=0):
+    response = json.loads(get(highlights_url.format(search=search)).text)
+    urls = []
+    for doc in response['docs']:
+        urls.append((doc['blurb'], doc['url']))
+    try:
+        blurb = urls[index][0]
+        video_url = urls[index][1]
+    except IndexError:
+        raise NoResultsError(f'No results for {search}')
+    soup = BeautifulSoup(get(video_url).text, 'html.parser')
+    video = soup.findChild(lambda tag: tag.name == 'meta' and tag.get('itemprop') == 'contentURL' and tag.get('content').endswith('.mp4')).get('content')
+    if video:
+        return video, blurb
+    else:
+        raise NoResultsError(f'Error parsing video url for {search}')
+
+
+def get_blurb(first, last, player_url=None):
     # for some weird reason its actually better to omit the first name in the search form
     response = get(player_url if player_url else blurb_search_url.format(first="", last=last))
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -96,12 +135,10 @@ def fetch_blurb(first, last, player_url=None):
                 name_map[result] = SequenceMatcher(None, first + " " + last, name).ratio()
         # sort names by similarity to search criteria
         sorted_names = sorted(name_map, key=name_map.get, reverse=True)
-        return fetch_blurb(first, last, 'http://www.rotoworld.com' + sorted_names[0].get('href'))  # this should work?
+        return get_blurb(first, last, 'http://www.rotoworld.com' + sorted_names[0].get('href'))  # this should work?
     else:
         news = soup.findChildren('div', class_='playernews')
         if news:
-            name_div = soup.findChild('div', class_='playername')
-            # name = name_div.findChild('h1').text.split('|')[0].strip()
             recent_news = news[0]
             report = recent_news.find('div', class_='report')
             impact = recent_news.find('div', class_='impact')
@@ -273,12 +310,15 @@ def format_player_stats(name, player_type, stat_map, date_range, season_year=Non
         
     if date_range: body += display('GP', stat_map)
     if player_type == PITCHER:
-        if not date_range and not season_year: body += display('DEC', stat_map)
-        if 'GS' in stat_map and stat_map['GS'] != '0': body += display('GS', stat_map)
+        if not date_range and not season_year:
+            body += display('DEC', stat_map)
+        if 'GS' in stat_map and stat_map['GS'] != '0':
+            body += display('GS', stat_map)
         if season_year:
             body += display('W', stat_map)
             body += display('L', stat_map)
-            if stat_map['SV'] and stat_map['SV'] != '0': body += display('SV', stat_map)
+        if 'SV' in stat_map and stat_map['SV'] != '0':
+            body += display('SV', stat_map)
         body += display('IP', stat_map)
         body += display('H', stat_map)
         body += display('R', stat_map)
@@ -291,14 +331,16 @@ def format_player_stats(name, player_type, stat_map, date_range, season_year=Non
         else:
             body += display('ERA', stat_map)
             body += display('WHIP', stat_map)
-        if not season_year: body += display('pitches', stat_map, "#PITCH")
+        if not season_year:
+            body += display('pitches', stat_map, "#PITCH")
     else:
         if season_year:
             body += "**" + 'AVG' + ':** ' + str(stat_map['batting_avg']) + (" (%s/%s)" % (stat_map['H'], stat_map['AB'])) + "\n"
             body += display("onbase_perc", stat_map, "OBP")
             body += display("slugging_perc", stat_map, "SLG")
             body += display("onbase_plus_slugging", stat_map, "OPS")
-        else: body += display('AVG', stat_map)
+        else:
+            body += display('AVG', stat_map)
         body += display('R', stat_map)
         body += display('2B', stat_map)
         body += display('3B', stat_map)
@@ -307,6 +349,7 @@ def format_player_stats(name, player_type, stat_map, date_range, season_year=Non
         body += display('BB', stat_map)
         body += display('SB', stat_map)
         body += display('SO', stat_map)
+    print(body)
 #     print(title + "\n")
 #     print(body)
     return discord.Embed(title=title, description=body)
@@ -378,6 +421,18 @@ def worst_batters():
     print("Bottom 5 Batting:\n" + tabulate(fetch_daily_stats("b", batter_stats_bad)[:-6:-1], ["NAME"] + batter_stats_bad[1:], tablefmt="grid"))
 
 
+def find(key, dictionary):
+    for k, v in dictionary.items():
+        if k == key:
+            yield v
+        elif isinstance(v, dict):
+            for result in find(key, v):
+                yield result
+        elif isinstance(v, list):
+            for d in v:
+                for result in find(key, d):
+                    yield result
+
 class NoResultsError(Exception):
     # TODO just log a message in whatever channel
     message = None
@@ -389,9 +444,10 @@ class NoResultsError(Exception):
 
 if __name__ == "__main__":
     # token = json.loads(open('token.json', 'r').read())["APP_TOKEN"]
-    token = os.environ.get('TOKEN', '')
-    client = SportsClient()
-    client.run(token)
+    get_highlight('Paul')
+    # token = os.environ.get('TOKEN', '')
+    # client = SportsClient()
+    # client.run(token)
 
 
 # get_log("Shohei", stat_type=PITCHER, season=True)
