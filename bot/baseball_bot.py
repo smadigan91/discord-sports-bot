@@ -14,7 +14,7 @@ bbref_url = 'https://www.baseball-reference.com'
 stats_url = bbref_url + '/leagues/daily.fcgi?request=1&type={type}&dates={dates}&level=mlb'
 search_url = bbref_url + '/search/search.fcgi?search={search}'
 blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={first}+{last}&sport=mlb'
-highlights_url = 'https://search-api.mlb.com/svc/search/v2/mlb_global_sitesearch_en/query?q={search}%2B2&page=1&sort=new&type=video&hl=false&expand=image&listed=true'
+highlights_url = 'https://search-api.mlb.com/svc/search/v2/mlb_global_sitesearch_en/query?q={search}&page=1&sort=new&type=video&hl=false&expand=image&listed=true'
 batter_log_stats = ["date_game", "opp_ID", "AB", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SO", "SB", "batting_avg", "onbase_perc", "slugging_perc", "onbase_plus_slugging"]  # derive AVG
 pitcher_log_stats = ["date_game", "opp_ID", "player_game_result", "IP", "H", "R", "ER", "BB", "SO", "pitches", "GS", "W", "L", "SV", "earned_run_avg", "whip"]  # derive ERA
 pitcher_stats = ["player", "", "IP", "H", "R", "ER", "BB", "SO", "pitches"]
@@ -88,11 +88,11 @@ class SportsClient(discord.Client):
                 try:
                     if msg[-1].isdigit():
                         index = msg[-1]
-                        search = '+'.join(msg[:-1])
+                        search = '%2B'.join(msg[:-1])
                         highlight = get_highlight(search, int(index)-1)
                         yield from self.send_message(message.channel, content=response % highlight)
                     else:
-                        highlight = get_highlight('+'.join(msg))
+                        highlight = get_highlight('%2B'.join(msg))
                         yield from self.send_message(message.channel, content=response % highlight)
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
