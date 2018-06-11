@@ -285,8 +285,19 @@ def index_game_row(row, player_type, stat_map):
                     val = category.findChild('a').text
                     stat_map["VS"] = val
                 elif stat == "player_game_result":
-                    val = "N/A" if not category.text else category.text
-                    stat_map["DEC"] = val
+                    val = category.text
+                    if not val:
+                        pass
+                    else:
+                        if val.startswith('S'):
+                            stat_map['SV'] = stat_map.get('SV', 0) + 1
+                        elif val.startswith('W'):
+                            stat_map['W'] = stat_map.get('W', 0) + 1
+                        elif val.startswith('L'):
+                            stat_map['L'] = stat_map.get('L', 0) + 1
+                        elif val.startswith('B'):
+                            stat_map['BS'] = stat_map.get('BS', 0) + 1
+                        stat_map["DEC"] = val
                 elif stat in ["earned_run_avg", "whip"]:
                     stat_map[stat] = category.text
                 else: stat_map[stat] = stat_map.get(stat, 0) + (int(category.text) if not stat == 'IP' else float(category.text))
@@ -311,13 +322,19 @@ def format_player_stats(name, player_type, stat_map, date_range, season_year=Non
     if player_type == PITCHER:
         if not date_range and not season_year:
             body += display('DEC', stat_map)
-        if 'GS' in stat_map and stat_map['GS'] != '0':
-            body += display('GS', stat_map)
-        if season_year:
-            body += display('W', stat_map)
-            body += display('L', stat_map)
-        if 'SV' in stat_map and stat_map['SV'] != '0':
-            body += display('SV', stat_map)
+        else:
+            if stat_map.get('GS', 0) != 0:
+                body += display('GS', stat_map)
+            if stat_map.get('W', 0) != 0:
+                body += display('W', stat_map)
+            if stat_map.get('L', 0) != 0:
+                body += display('L', stat_map)
+            if stat_map.get('SV', 0) != 0:
+                body += display('SV', stat_map)
+            if stat_map.get('BS', 0) != 0:
+                body += display('BS', stat_map)
+        # if 'BS' in stat_map and stat_map['BS'] != 0:
+        #     body += display('BS', stat_map)
         body += display('IP', stat_map)
         body += display('H', stat_map)
         body += display('R', stat_map)
@@ -348,14 +365,8 @@ def format_player_stats(name, player_type, stat_map, date_range, season_year=Non
         body += display('BB', stat_map)
         body += display('SB', stat_map)
         body += display('SO', stat_map)
-    print(body)
-#     print(title + "\n")
-#     print(body)
+    # print(body) <-- local debug only
     return discord.Embed(title=title, description=body)
-    # if just one day, title should be:
-    # "Stats for <Name> on <Date> vs <OPP>
-    # if multi days, title should be:
-    # "Stats for <Name> from <start> thru <end>
 
 
 def display(key, stats, override=None):
