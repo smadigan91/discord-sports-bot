@@ -74,7 +74,7 @@ class SportsClient(discord.Client):
             if message.content.startswith('/season'):
                 msg = message.content.split()[1:]
                 try:
-                    if msg[-1].isdigit():
+                    if msg[0].isdigit():
                         embedded_stats = get_log(" ".join(msg[1:]), season=True, season_year=msg[0])
                     else:
                         embedded_stats = get_log(" ".join(msg), season=True)
