@@ -318,60 +318,62 @@ def format_player_stats(name, player_type, stat_map, date_range, season_year=Non
     else:
         title = "%s from %s through %s" % (name, date_range[0], date_range[1])
         
-    if date_range: body += display('GP', stat_map)
+    if date_range: body += display_get('GP', stat_map)
     if player_type == PITCHER:
         if not date_range and not season_year:
-            body += display('DEC', stat_map)
+            body += display_get('DEC', stat_map, default="N/A")
         else:
             if stat_map.get('GS', 0) != 0:
-                body += display('GS', stat_map)
+                body += display_get('GS', stat_map)
             if stat_map.get('W', 0) != 0:
-                body += display('W', stat_map)
+                body += display_get('W', stat_map)
             if stat_map.get('L', 0) != 0:
-                body += display('L', stat_map)
+                body += display_get('L', stat_map)
             if stat_map.get('SV', 0) != 0:
-                body += display('SV', stat_map)
+                body += display_get('SV', stat_map)
             if stat_map.get('BS', 0) != 0:
-                body += display('BS', stat_map)
+                body += display_get('BS', stat_map)
         # if 'BS' in stat_map and stat_map['BS'] != 0:
         #     body += display('BS', stat_map)
-        body += display('IP', stat_map)
-        body += display('H', stat_map)
-        body += display('R', stat_map)
-        body += display('ER', stat_map)
-        body += display('BB', stat_map)
-        body += display('SO', stat_map)
+        body += display_get('IP', stat_map)
+        body += display_get('H', stat_map)
+        body += display_get('R', stat_map)
+        body += display_get('ER', stat_map)
+        body += display_get('BB', stat_map)
+        body += display_get('SO', stat_map)
         if season_year:
-            body += display('earned_run_avg', stat_map, "ERA")
-            body += display('whip', stat_map, "WHIP")
+            body += display_get('earned_run_avg', stat_map, "ERA")
+            body += display_get('whip', stat_map, "WHIP")
         else:
-            body += display('ERA', stat_map)
-            body += display('WHIP', stat_map)
+            body += display_get('ERA', stat_map)
+            body += display_get('WHIP', stat_map)
         if not season_year:
-            body += display('pitches', stat_map, "#PITCH")
+            body += display_get('pitches', stat_map, "#PITCH")
     else:
         if season_year:
             body += "**" + 'AVG' + ':** ' + str(stat_map['batting_avg']) + (" (%s/%s)" % (stat_map['H'], stat_map['AB'])) + "\n"
-            body += display("onbase_perc", stat_map, "OBP")
-            body += display("slugging_perc", stat_map, "SLG")
-            body += display("onbase_plus_slugging", stat_map, "OPS")
+            body += display_get("onbase_perc", stat_map, "OBP")
+            body += display_get("slugging_perc", stat_map, "SLG")
+            body += display_get("onbase_plus_slugging", stat_map, "OPS")
         else:
-            body += display('AVG', stat_map)
-        body += display('R', stat_map)
-        body += display('2B', stat_map)
-        body += display('3B', stat_map)
-        body += display('HR', stat_map)
-        body += display('RBI', stat_map)
-        body += display('BB', stat_map)
-        body += display('SB', stat_map)
-        body += display('SO', stat_map)
+            body += display_get('AVG', stat_map)
+        body += display_get('R', stat_map)
+        body += display_get('2B', stat_map)
+        body += display_get('3B', stat_map)
+        body += display_get('HR', stat_map)
+        body += display_get('RBI', stat_map)
+        body += display_get('BB', stat_map)
+        body += display_get('SB', stat_map)
+        body += display_get('SO', stat_map)
     # print(body) <-- local debug only
     return discord.Embed(title=title, description=body)
 
 
-def display(key, stats, override=None):
+def display_get(key, stats, key_override=None, default=""):
     if key in stats:
-        return "**" + (key if not override else override) + ':** ' + str(stats[key]) + "\n"
+        return "**" + (key if not key_override else key_override) + ':** ' + str(stats[key]) + "\n"
+    else:
+        return "**" + (key if not key_override else key_override) + ':** ' + default + "\n"
 
 
 class NoResultsError(Exception):
