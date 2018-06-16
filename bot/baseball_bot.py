@@ -90,7 +90,7 @@ class SportsClient(discord.Client):
                         search = '%2B'.join(msg[1:])
                         highlights = get_highlight(search, list_index=True)
                         yield from self.send_message(message.channel, content=highlights)
-                    if msg[-1].isdigit():
+                    elif msg[-1].isdigit():
                         index = msg[-1]
                         search = '%2B'.join(msg[:-1])
                         highlight = get_highlight(search, int(index)-1)
