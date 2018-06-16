@@ -86,6 +86,10 @@ class SportsClient(discord.Client):
                 msg = message.content.split()[1:]
                 response = "\n%s\n%s"
                 try:
+                    if msg[0] == 'index':
+                        search = '%2B'.join(msg[1:])
+                        highlights = get_highlight(search, list_index=True)
+                        yield from self.send_message(message.channel, content=highlights)
                     if msg[-1].isdigit():
                         index = msg[-1]
                         search = '%2B'.join(msg[:-1])
@@ -98,22 +102,36 @@ class SportsClient(discord.Client):
                     yield from self.send_message(message.channel, content=str(ex))
 
 
-def get_highlight(search, index=0):
+def get_highlight(search, index=0, list_index=False):
     response = json.loads(get(highlights_url.format(search=search)).text)
     urls = []
+    title_index = {}
+    idx = 1
     for doc in response['docs']:
-        urls.append((doc['title'], doc['url']))
-    try:
-        title = '**' + urls[index][0] + '**'
-        video_url = urls[index][1]
-    except IndexError:
-        raise NoResultsError(f'No results for {search}')
-    soup = BeautifulSoup(get(video_url).text, 'html.parser')
-    video = soup.findChild(lambda tag: tag.name == 'meta' and tag.get('itemprop') == 'contentURL' and tag.get('content').endswith('.mp4')).get('content')
-    if video:
-        return title, video
+        title = doc['title']
+        urls.append((title, doc['url']))
+        title_index[idx] = title
+        idx = idx + 1
+    if list_index:
+        if title_index:
+            body = ""
+            for index, title in title_index.items():
+                body += f"{index} - {title}" + "\n"
+            return discord.Embed(title="Highlight Index", description=body)
+        else:
+            raise NoResultsError(f'No results for {search}')
     else:
-        raise NoResultsError(f'Error parsing video url for {search}')
+        try:
+            title = '**' + urls[index][0] + '**'
+            video_url = urls[index][1]
+        except IndexError:
+            raise NoResultsError(f'No results for {search}')
+        soup = BeautifulSoup(get(video_url).text, 'html.parser')
+        video = soup.findChild(lambda tag: tag.name == 'meta' and tag.get('itemprop') == 'contentURL' and tag.get('content').endswith('.mp4')).get('content')
+        if video:
+            return title, video
+        else:
+            raise NoResultsError(f'Error parsing video url for {search}')
 
 
 def get_blurb(first, last, player_url=None):
@@ -143,7 +161,8 @@ def get_blurb(first, last, player_url=None):
             impact = recent_news.find('div', class_='impact')
             blurb = report.text + '\n\n' + impact.text
             return blurb
-        else: raise NoResultsError("No recent player news for %s %s" % (first, last))
+        else:
+            raise NoResultsError("No recent player news for %s %s" % (first, last))
     
     # if only one result, I think it just redirects? test this one first with "pollock"
 
