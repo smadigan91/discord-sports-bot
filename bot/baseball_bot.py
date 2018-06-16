@@ -300,7 +300,15 @@ def index_game_row(row, player_type, stat_map):
                         stat_map["DEC"] = val
                 elif stat in ["earned_run_avg", "whip"]:
                     stat_map[stat] = category.text
-                else: stat_map[stat] = stat_map.get(stat, 0) + (int(category.text) if not stat == 'IP' else float(category.text))
+                elif stat == 'IP':
+                    ip_sum = stat_map.get(stat, 0.0) + float(category.text)
+                    if round(ip_sum % 1, 2) == 0.3:
+                        ip_sum = ip_sum - 0.3 + 1.0
+                    elif round(ip_sum % 1, 2) == 0.4:
+                        ip_sum = ip_sum - 0.4 + 1.1
+                    stat_map[stat] = ip_sum
+                else:
+                    stat_map[stat] = stat_map.get(stat, 0) + int(category.text)
         ERA = "0.00" if stat_map['IP'] == '0' else '{0:.2f}'.format(round((9.0 * (float(stat_map['ER']) / float(stat_map['IP']))), 3))
         WHIP = "0.00" if stat_map['IP'] == '0' else '{0:.2f}'.format(round((float(stat_map['BB']) + float(stat_map['H'])) / float(stat_map['IP']), 3))
         stat_map['ERA'] = ERA
