@@ -159,7 +159,7 @@ def get_log(search, stat_type=None, player_url=None, date=None, last_days=None, 
         name_node = soup.find('h1', attrs={'itemprop':'name'})
         name = name_node.text
         if last_days:
-            end_date = datetime.date.today()
+            end_date = datetime.date.today() - datetime.timedelta(days=1)
             start_date = end_date - datetime.timedelta(days=last_days)
             date_range = (start_date, end_date)
         elif date:
