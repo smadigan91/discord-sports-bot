@@ -15,7 +15,7 @@ stats_url = bbref_url + '/leagues/daily.fcgi?request=1&type={type}&dates={dates}
 search_url = bbref_url + '/search/search.fcgi?search={search}'
 blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={first}+{last}&sport=mlb'
 highlights_url = 'https://search-api.mlb.com/svc/search/v2/mlb_global_sitesearch_en/query?q={search}&page=1&sort=new&type=video&hl=false&expand=image&listed=true'
-batter_log_stats = ["date_game", "opp_ID", "AB", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SO", "SB", "batting_avg", "onbase_perc", "slugging_perc", "onbase_plus_slugging"]  # derive AVG
+batter_log_stats = ["date_game", "opp_ID", "AB", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SO", "SB", "HBP", "SF", "batting_avg", "onbase_perc", "slugging_perc", "onbase_plus_slugging"]  # derive AVG
 pitcher_log_stats = ["date_game", "opp_ID", "player_game_result", "IP", "H", "R", "ER", "BB", "SO", "pitches", "GS", "W", "L", "SV", "earned_run_avg", "whip"]  # derive ERA
 pitcher_stats = ["player", "", "IP", "H", "R", "ER", "BB", "SO", "pitches"]
 batter_stats_good = ["player", "PA", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SB"]
@@ -292,7 +292,13 @@ def index_game_row(row, player_type, stat_map):
                 else: stat_map[stat] = stat_map.get(stat, 0) + int(category.text)
         HAB = str(stat_map['H']) + "/" + str(stat_map['AB'])
         AVG = ".000" if stat_map['AB'] == '0' else ("%.3f" % round(int(stat_map['H']) / int(stat_map['AB']), 3)).lstrip('0')
+        SLG = ("%.3f" % round(((stat_map['H'] - (stat_map['2B'] + stat_map['3B'] + stat_map['HR'])) + (2*stat_map['2B']) + (3*stat_map['3B']) + (4*stat_map['HR']))/stat_map['AB'], 3)).lstrip('0')
+        OBP = ("%.3f" % round((stat_map['H'] + stat_map['BB'] + stat_map['HBP']) / (stat_map['AB'] + stat_map['BB'] + stat_map['HBP'] + stat_map['SF']), 3)).lstrip('0')
+        OPS = ("%.3f" % (float(SLG) + float(OBP))).lstrip('0')
         stat_map['AVG'] = AVG + (" (%s)" % HAB)
+        stat_map['SLG'] = SLG
+        stat_map['OBP'] = OBP
+        stat_map['OPS'] = OPS
     else:
         for category in row.find_all('td'):
             stat = category.get('data-stat')
@@ -384,6 +390,9 @@ def format_player_stats(name, player_type, stat_map, date_range, season_year=Non
             body += display_get("onbase_plus_slugging", stat_map, "OPS")
         else:
             body += display_get('AVG', stat_map)
+            body += display_get('OBP', stat_map)
+            body += display_get('SLG', stat_map)
+            body += display_get('OPS', stat_map)
         body += display_get('R', stat_map)
         body += display_get('2B', stat_map)
         body += display_get('3B', stat_map)
@@ -392,7 +401,7 @@ def format_player_stats(name, player_type, stat_map, date_range, season_year=Non
         body += display_get('BB', stat_map)
         body += display_get('SB', stat_map)
         body += display_get('SO', stat_map)
-    # print(body) <-- local debug only
+    print(body)
     return discord.Embed(title=title, description=body)
 
 
