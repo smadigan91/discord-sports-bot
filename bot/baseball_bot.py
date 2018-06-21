@@ -401,7 +401,7 @@ def format_player_stats(name, player_type, stat_map, date_range, season_year=Non
         body += display_get('BB', stat_map)
         body += display_get('SB', stat_map)
         body += display_get('SO', stat_map)
-    print(body)
+    # print(body)
     return discord.Embed(title=title, description=body)
 
 
