@@ -2,7 +2,7 @@ help_map = {
     "**/blurb [first_name: str]`*` [last_name: str]`*`**": "\nFetches the most recent blurb for a given player\n",
 
     "**/last [num_days: int]`*` [player_search: str]`*`**": "\nFetches the last [num_days] worth of stats for a given "
-                                                            "player",
+                                                            "player\n",
 
     "**/log [player_search: str]`*`**": "Fetches the most recent gamelog for a given player\n",
 
