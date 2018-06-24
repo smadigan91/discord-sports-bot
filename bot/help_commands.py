@@ -12,6 +12,6 @@ help_map = {
 
 def get_help_text():
     body = ""
-    for command, desc in help_map:
+    for command, desc in help_map.items():
         body += f"{command}: {desc}" + "\n"
     return body
