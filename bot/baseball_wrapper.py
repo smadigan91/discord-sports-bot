@@ -211,7 +211,9 @@ def index_game_row(row, player_type, stat_map):
                     stat_map['VS'] = val
                 elif stat in ["batting_avg", "onbase_perc", "slugging_perc", "onbase_plus_slugging"]:
                     stat_map[stat] = category.text
-                else: stat_map[stat] = stat_map.get(stat, 0) + int(category.text)
+                else:
+                    text = category.text
+                    stat_map[stat] = stat_map.get(stat, 0) + int(text if text != '' else 0)
         HAB = str(stat_map['H']) + "/" + str(stat_map['AB'])
         AVG = ".000" if stat_map['AB'] == '0' else ("%.3f" % round(int(stat_map['H']) / int(stat_map['AB']), 3)).lstrip('0')
         SLG = ("%.3f" % round(((stat_map['H'] - (stat_map['2B'] + stat_map['3B'] + stat_map['HR'])) + (2*stat_map['2B']) + (3*stat_map['3B']) + (4*stat_map['HR']))/stat_map['AB'], 3)).lstrip('0')
@@ -347,4 +349,4 @@ class NoResultsError(Exception):
 
 # debug purposes only
 # DEBUG = True
-# get_log("Tony Kemp", last_days=7)
+# get_log("Tony Kemp", last_days=30)
