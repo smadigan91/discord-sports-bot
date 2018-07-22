@@ -21,6 +21,7 @@ batter_stats_bad = ["player", "PA", "H", "BB", "SO", "GIDP", "CS"]
 pitcher_display = ["NAME"] + pitcher_stats[1:-1] + ["#P"]
 PITCHER = 'p'  # need to be careful not to confuse this with searching for html elements
 BATTER = 'b'
+DEBUG = False
 
 
 def get_highlight(search, index=0, list_index=False):
@@ -100,7 +101,7 @@ def get_log(search, stat_type=None, player_url=None, date=None, last_days=None, 
         name = name_node.text
         if last_days:
             end_date = datetime.date.today() - datetime.timedelta(days=1)
-            start_date = end_date - datetime.timedelta(days=last_days)
+            start_date = end_date - datetime.timedelta(days=last_days-1)
             date_range = (start_date, end_date)
         elif date:
             date_range = (date)
@@ -322,7 +323,9 @@ def format_player_stats(name, player_type, stat_map, date_range, season_year=Non
         body += display_get('BB', stat_map)
         body += display_get('SB', stat_map)
         body += display_get('SO', stat_map)
-    # print(body)
+    if DEBUG:
+        print(title)
+        print(body)
     return discord.Embed(title=title, description=body)
 
 
@@ -340,3 +343,8 @@ class NoResultsError(Exception):
     def __init__(self, message):
         super().__init__(message)
         self.message = message
+
+
+# debug purposes only
+# DEBUG = True
+# get_log("Tony Kemp", last_days=7)
