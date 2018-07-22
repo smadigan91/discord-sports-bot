@@ -145,7 +145,6 @@ def get_log(search, stat_type=None, player_url=None, date=None, last_days=None, 
 def get_player_summary(name, response, player_type, date_range=None, season=False, season_year=None, most_recent=True):
     # if season, get season gamelogs
     # else get gamelogs
-    table = []
     if season:
         table = [get_season_table(name, response, player_type, season_year).pop()]
         season_year = table[0].get('id').split('.')[1]
@@ -154,14 +153,26 @@ def get_player_summary(name, response, player_type, date_range=None, season=Fals
     cat_dict = {}
     # index the stats
     for row in table:
-        index_game_row(row, player_type, cat_dict)
+        stat_map = index_game_row(row, player_type, cat_dict)
+    if player_type == PITCHER and not season:
+        IP = float(stat_map['IP'])
+        ER = float(stat_map['ER'])
+        BB = float(stat_map['BB'])
+        H = float(stat_map['H'])
+        if not IP:
+            ERA = 'INF' if ER else "0.00"
+            WHIP = 'INF' if (BB or H) else "0.00"
+        else:
+            ERA = '{0:.2f}'.format(round((9.0 * (ER / IP)), 3))
+            WHIP = '{0:.2f}'.format(round((BB + H) / IP, 3))
+        stat_map['ERA'] = ERA
+        stat_map['WHIP'] = WHIP
     return format_player_stats(name, player_type, cat_dict, date_range, season_year)
 
 
 def get_gamelog_table(name, response, player_type, date_range=None, most_recent=True):
     soup = BeautifulSoup(response.text, 'html.parser')
     tag_id = 'batting_gamelogs' if player_type == BATTER else 'pitching_gamelogs'
-    table = []
     if date_range:
         # filters the list of game rows down to those matching the date range
         table = soup.find('table', attrs={'id':tag_id}).find('tbody').findChildren(
@@ -258,10 +269,7 @@ def index_game_row(row, player_type, stat_map):
                     stat_map[stat] = ip_sum
                 else:
                     stat_map[stat] = stat_map.get(stat, 0) + int(category.text)
-        ERA = "0.00" if stat_map['IP'] == '0' else '{0:.2f}'.format(round((9.0 * (float(stat_map['ER']) / float(stat_map['IP']))), 3))
-        WHIP = "0.00" if stat_map['IP'] == '0' else '{0:.2f}'.format(round((float(stat_map['BB']) + float(stat_map['H'])) / float(stat_map['IP']), 3))
-        stat_map['ERA'] = ERA
-        stat_map['WHIP'] = WHIP
+    return stat_map
 
 
 # given a name and a map of categories to values, return a formatted string
@@ -349,4 +357,4 @@ class NoResultsError(Exception):
 
 # debug purposes only
 # DEBUG = True
-# get_log("Tony Kemp", last_days=30)
+# get_log("Edubray Ramos", last_days=10)
