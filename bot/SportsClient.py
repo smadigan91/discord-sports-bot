@@ -12,8 +12,8 @@ class SportsClient(discord.Client):
     def on_message(self, message):
         if message.channel.name in ["sportsbot-testing", "baseball"]:
             # /help
-            contentLower = message.content.lower();
-            if contentLower.startswith('/help'):
+            content_lower = message.content.lower();
+            if content_lower.startswith('/help'):
                 try:
                     help_map = discord.Embed(title="Commands List", description=get_help_text())
                     yield from self.send_message(message.channel, embed=help_map)
@@ -21,7 +21,7 @@ class SportsClient(discord.Client):
                     yield from self.send_message(message.channel, content=str(ex))
 
             # /blurb [firstname]* [lastname]*
-            if contentLower.startswith('/blurb'):
+            if content_lower.startswith('/blurb'):
                 msg = message.content.split()[1:]
                 try:
                     first = msg[0]
@@ -34,7 +34,7 @@ class SportsClient(discord.Client):
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
             # /last [num days]* [player]*
-            if contentLower.startswith('/last'):
+            if content_lower.startswith('/last'):
                 msg = message.content.split()[1:]
                 try:
                     days = int(msg[0])
@@ -47,7 +47,7 @@ class SportsClient(discord.Client):
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
             # /log [player]*
-            if contentLower.startswith('/log'):
+            if content_lower.startswith('/log'):
                 try:
                     search = " ".join(message.content.split()[1:])
                     embedded_stats = get_log(search)
@@ -55,7 +55,7 @@ class SportsClient(discord.Client):
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
             # /season [year] [player]*
-            if contentLower.startswith('/season'):
+            if content_lower.startswith('/season'):
                 msg = message.content.split()[1:]
                 try:
                     if msg[0].isdigit():
@@ -66,7 +66,7 @@ class SportsClient(discord.Client):
                 except Exception as ex:
                     yield from self.send_message(message.channel, content=str(ex))
             # /highlight [player]* [index]
-            if contentLower.startswith('/highlight'):
+            if content_lower.startswith('/highlight'):
                 msg = message.content.split()[1:]
                 response = "\n%s\n%s"
                 try:
