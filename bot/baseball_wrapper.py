@@ -1,17 +1,16 @@
-from datetime import datetime as dt
 import datetime
-from difflib import SequenceMatcher
+import discord
 import json
 import urllib
 
+from datetime import datetime as dt
 from bs4 import BeautifulSoup
-import discord
 from requests import get
+from util import NoResultsError, get_blurb
 
 bbref_url = 'https://www.baseball-reference.com'
 stats_url = bbref_url + '/leagues/daily.fcgi?request=1&type={type}&dates={dates}&level=mlb'
 search_url = bbref_url + '/search/search.fcgi?search={search}'
-blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={first}+{last}&sport=mlb'
 highlights_url = 'https://search-api.mlb.com/svc/search/v2/mlb_global_sitesearch_en/query?q={search}&page=1&sort=new&type=video&hl=false&expand=image&listed=true'
 batter_log_stats = ["date_game", "opp_ID", "AB", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SO", "SB", "HBP", "SF", "batting_avg", "onbase_perc", "slugging_perc", "onbase_plus_slugging"]  # derive AVG
 pitcher_log_stats = ["date_game", "opp_ID", "player_game_result", "IP", "H", "R", "ER", "BB", "SO", "pitches", "GS", "W", "L", "SV", "earned_run_avg", "whip"]  # derive ERA
@@ -56,37 +55,8 @@ def get_highlight(search, index=0, list_index=False):
             raise NoResultsError(f'Error parsing video url for {search}')
 
 
-def get_blurb(first, last, player_url=None):
-    # for some weird reason its actually better to omit the first name in the search form
-    response = get(player_url if player_url else blurb_search_url.format(first="", last=last))
-    soup = BeautifulSoup(response.text, 'html.parser')
-    # did we land a result page?
-    if not soup.findChild('div', class_='RW_pn'):
-        name_map = {}
-        results_table = soup.find('table', attrs={'id':'cp1_tblSearchResults'})
-        # filter results, omitting duplicate "position" links that don't include the player's name
-        filtered_results = results_table.findChildren(lambda tag:tag.name == 'a' and 'player' in tag['href'] and len(tag.text) > 3)
-        if not filtered_results:
-            raise NoResultsError("No results for %s %s" % (first, last))
-        else:
-            for result in filtered_results:
-                name = " ".join(result.text.split())
-                name_map[result] = SequenceMatcher(None, first + " " + last, name).ratio()
-        # sort names by similarity to search criteria
-        sorted_names = sorted(name_map, key=name_map.get, reverse=True)
-        return get_blurb(first, last, 'http://www.rotoworld.com' + sorted_names[0].get('href'))  # this should work?
-    else:
-        news = soup.findChildren('div', class_='playernews')
-        if news:
-            recent_news = news[0]
-            report = recent_news.find('div', class_='report')
-            impact = recent_news.find('div', class_='impact')
-            blurb = report.text + '\n\n' + impact.text
-            return blurb
-        else:
-            raise NoResultsError("No recent player news for %s %s" % (first, last))
-    
-    # if only one result, I think it just redirects? test this one first with "pollock"
+def get_baseball_blurb(first, last):
+    return get_blurb(first, last, 'mlb')
 
 
 # just better to do a search and find the best matching result
@@ -344,16 +314,6 @@ def display_get(key, stats, key_override=None, default=""):
         return "**" + (key if not key_override else key_override) + ':** ' + str(stats[key]) + "\n"
     else:
         return "**" + (key if not key_override else key_override) + ':** ' + default + "\n"
-
-
-class NoResultsError(Exception):
-    # TODO just log a message in whatever channel
-    message = None
-
-    def __init__(self, message):
-        super().__init__(message)
-        self.message = message
-
 
 # debug purposes only
 # DEBUG = True

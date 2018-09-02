@@ -1,1 +1,1 @@
-bot: python bot/SportsClient.py
+bot: python bot/sports_client.py
