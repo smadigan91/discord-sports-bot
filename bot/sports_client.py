@@ -12,19 +12,17 @@ class SportsClient(discord.Client):
     @asyncio.coroutine
     def on_message(self, message):
         if message.channel.name in ["sportsbot-testing", "baseball"]:
-            self.handle_baseball_request(message)
+            yield from self.handle_baseball_request(message)
         elif message.channel.name in ["american-football"]:
-            self.handle_football_request(message)
+            yield from self.handle_football_request(message)
 
-    @asyncio.coroutine
     def handle_football_request(self, message):
         sport = 'nfl'
         content_lower = message.content.lower()
         # /blurb [firstname]* [lastname]*
         if content_lower.startswith('/blurb'):
-            self.handle_blurb(message, sport)
+            yield from self.handle_blurb(message, sport)
 
-    @asyncio.coroutine
     def handle_baseball_request(self, message):
         sport = 'mlb'
         # /help
@@ -38,7 +36,7 @@ class SportsClient(discord.Client):
 
         # /blurb [firstname]* [lastname]*
         if content_lower.startswith('/blurb'):
-            self.handle_blurb(message, sport)
+            yield from self.handle_blurb(message, sport)
         # /last [num days]* [player]*
         if content_lower.startswith('/last'):
             msg = message.content.split()[1:]
@@ -91,7 +89,6 @@ class SportsClient(discord.Client):
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
 
-    @asyncio.coroutine
     def handle_blurb(self, message, sport):
         msg = message.content.split()[1:]
         try:
