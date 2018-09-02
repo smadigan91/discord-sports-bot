@@ -59,8 +59,6 @@ def get_baseball_blurb(first, last):
     return get_blurb(first, last, 'mlb')
 
 
-# just better to do a search and find the best matching result
-# maybe add specific date functionality eventually?
 def get_log(search, stat_type=None, player_url=None, date=None, last_days=None, date_range=None, season=False, season_year=None, most_recent=True):
     response = get(player_url if player_url else search_url.format(search=urllib.parse.quote(search)))
     soup = BeautifulSoup(response.text, 'html.parser')
