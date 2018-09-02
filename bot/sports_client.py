@@ -10,20 +10,20 @@ from help_commands import get_help_text
 class SportsClient(discord.Client):
 
     @asyncio.coroutine
-    def on_message(self, message: discord.message):
+    def on_message(self, message):
         if message.channel.name in ["sportsbot-testing", "baseball"]:
             self.handle_baseball_request(message)
         elif message.channel.name in ["american-football"]:
             self.handle_football_request(message)
 
-    def handle_football_request(self, message: discord.message):
+    def handle_football_request(self, message):
         sport = 'nfl'
         content_lower = message.content.lower()
         # /blurb [firstname]* [lastname]*
         if content_lower.startswith('/blurb'):
             self.handle_blurb(message, sport)
 
-    def handle_baseball_request(self, message: discord.message):
+    def handle_baseball_request(self, message):
         sport = 'mlb'
         # /help
         content_lower = message.content.lower()
@@ -89,7 +89,7 @@ class SportsClient(discord.Client):
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
 
-    def handle_blurb(self, message: discord.message, sport):
+    def handle_blurb(self, message, sport):
         msg = message.content.split()[1:]
         try:
             first = msg[0]
