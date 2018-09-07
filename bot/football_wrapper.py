@@ -6,7 +6,7 @@ from util import NoResultsError, get_blurb
 from bs4 import BeautifulSoup
 
 search_url = 'https://www.fantasypros.com/nfl/start/{p1}-{p2}.php?scoring={scoring}'
-player_search_url = 'https://www.fantasypros.com/ajax/players.php?callback=searchcb&q={first}+{last}&index=nfl_players&sport=NFL'
+player_search_url = 'https://www.fantasypros.com/ajax/players.php?callback=searchcb&q={name}&index=nfl_players&sport=NFL'
 DEBUG = False
 
 
@@ -39,7 +39,7 @@ def get_start_sit_advice(players, scoring='Standard'):
     except NoResultsError:
         raise
     except Exception:
-        raise ValueError("Request phrase must be of format '[player_1] or [player_2] [ppr|half|standard*]'")
+        raise ValueError("Request phrase must be of format \"[player_1] or [player_2] [ppr|half|standard*]\"")
     response = urllib.request.urlopen(search_url.format(p1=p1_valid_name, p2=p2_valid_name, scoring=scoring))
     soup = BeautifulSoup(response.read().decode('utf-8'), 'html.parser')
     title = soup.find('title').text
@@ -61,7 +61,7 @@ def get_start_sit_advice(players, scoring='Standard'):
 
 def search_dropdown(player_name):
     player_name = player_name.split()
-    response = urllib.request.urlopen(player_search_url.format(first=player_name[0], last=player_name[1]))
+    response = urllib.request.urlopen(player_search_url.format(name="+".join(player_name)))
     response = response.read().decode('utf-8')
     # print(response)
     json_results = json.loads(re.search(r'searchcb\((.*?)\);', response).group(1))['results']
@@ -72,5 +72,5 @@ def search_dropdown(player_name):
     return search_name
 
 # DEBUG = True
-# msg = '/start adrian peterson or sony michel'
+# msg = '/start josh gordon or crabtree ppr'
 # start_or_sit(msg.split()[1:])
