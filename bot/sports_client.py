@@ -3,7 +3,7 @@ import discord
 import os
 
 from baseball_wrapper import get_log, get_highlight, get_baseball_blurb
-from football_wrapper import get_football_blurb
+from football_wrapper import get_football_blurb, start_or_sit
 from help_commands import get_help_text
 
 
@@ -22,6 +22,9 @@ class SportsClient(discord.Client):
         # /blurb [firstname]* [lastname]*
         if content_lower.startswith('/blurb'):
             yield from self.handle_blurb(message, sport)
+        elif content_lower.startswith('/start'):
+            msg = content_lower.split()[1:]
+            yield from start_or_sit(msg)
 
     def handle_baseball_request(self, message):
         sport = 'mlb'
