@@ -71,6 +71,6 @@ def search_dropdown(player_name):
         raise NoResultsError(f'No results for {player_name[0]} {player_name[1]}')
     return search_name
 
-DEBUG = True
-msg = '/start adrian peterson or sony michel'
-start_or_sit(msg.split()[1:])
+# DEBUG = True
+# msg = '/start adrian peterson or sony michel'
+# start_or_sit(msg.split()[1:])
