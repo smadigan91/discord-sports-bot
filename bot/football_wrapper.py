@@ -33,8 +33,13 @@ def start_or_sit(msg):
 
 def get_start_sit_advice(players, scoring='Standard'):
     # print(search_url.format(p1_first=p1[0], p1_second=p1[1], p2_first=p2[0], p2_second=p2[1], scoring=scoring))
-    p1_valid_name = search_dropdown(players[0])
-    p2_valid_name = search_dropdown(players[1])
+    try:
+        p1_valid_name = search_dropdown(players[0])
+        p2_valid_name = search_dropdown(players[1])
+    except NoResultsError:
+        raise
+    except Exception:
+        raise ValueError("Request phrase must be of format '[player_1] or [player_2] [ppr|half|standard*]'")
     response = urllib.request.urlopen(search_url.format(p1=p1_valid_name, p2=p2_valid_name, scoring=scoring))
     soup = BeautifulSoup(response.read().decode('utf-8'), 'html.parser')
     title = soup.find('title').text
@@ -66,6 +71,6 @@ def search_dropdown(player_name):
         raise NoResultsError(f'No results for {player_name[0]} {player_name[1]}')
     return search_name
 
-# DEBUG = True
-# msg = '/start adrian peterson or sony michel ppr'
-# start_or_sit(msg.split()[1:])
+DEBUG = True
+msg = '/start adrian peterson or sony michel'
+start_or_sit(msg.split()[1:])

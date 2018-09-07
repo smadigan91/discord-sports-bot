@@ -24,7 +24,11 @@ class SportsClient(discord.Client):
             yield from self.handle_blurb(message, sport)
         elif content_lower.startswith('/start'):
             msg = content_lower.split()[1:]
-            yield from start_or_sit(msg)
+            try:
+                embed = start_or_sit(msg)
+                yield from self.send_message(message.channel, embed=embed)
+            except Exception as ex:
+                yield from self.send_message(message.channel, content=str(ex))
 
     def handle_baseball_request(self, message):
         sport = 'mlb'
