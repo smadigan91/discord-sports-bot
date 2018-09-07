@@ -63,7 +63,7 @@ def search_dropdown(player_name):
     try:
         search_name = re.search(r'players\/(.*?).php', json_results[0]['link']).group(1)
     except IndexError:
-        raise NoResultsError(f'No results for {player_first} {player_last}')
+        raise NoResultsError(f'No results for {player_name[0]} {player_name[1]}')
     return search_name
 
 # DEBUG = True
