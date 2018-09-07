@@ -28,7 +28,7 @@ def start_or_sit(msg):
     else:
         scoring = 'Standard'
     players = ' '.join(msg).split(' or ')
-    get_start_sit_advice(players, scoring)
+    return get_start_sit_advice(players, scoring)
 
 
 def get_start_sit_advice(players, scoring='Standard'):
