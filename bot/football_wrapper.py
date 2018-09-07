@@ -51,8 +51,8 @@ def get_start_sit_advice(players, scoring='Standard'):
     start = soup.find(lambda tag: tag.name == 'a' and 'fp-player-name' in tag.attrs)
     sit = start.find_next(lambda tag: tag.name == 'a' and 'fp-player-name' in tag.attrs)
     title = "**"+title+"**\n"
-    body = "{} {}\n{}\n\n".format('**Start:**', start['fp-player-name'], f"{more.text} ({more_experts})")
-    body = body + "{} {}\n{}".format('**Sit:**', sit['fp-player-name'], f"{less.text} ({less_experts})")
+    body = "{} {}\n{}\n\n".format('**Start:**', start['fp-player-name'], f"**{more.text}** ({more_experts})")
+    body = body + "{} {}\n{}".format('**Sit:**', sit['fp-player-name'], f"**{less.text}** ({less_experts})")
     if DEBUG:
         print(title)
         print(body)
