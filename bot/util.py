@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
 from requests import get
 
-blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={first}+{last}&sport={sport}'
+blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={last},{first}&sport={sport}'
 
 
 def get_blurb(first, last, sport, player_url=None):
