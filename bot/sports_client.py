@@ -15,6 +15,8 @@ class SportsClient(discord.Client):
             yield from self.handle_baseball_request(message)
         elif message.channel.name in ["american-football"]:
             yield from self.handle_football_request(message)
+        elif message.channel.name in ["basketball", "betterlatethannever"]:
+            yield from self.handle_basketball_request(message)
 
     def handle_football_request(self, message):
         sport = 'nfl'
@@ -29,6 +31,13 @@ class SportsClient(discord.Client):
                 yield from self.send_message(message.channel, embed=embed)
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
+
+    def handle_basketball_request(self, message):
+        sport = 'nba'
+        content_lower = message.content.lower()
+        # /blurb [firstname]* [lastname]*
+        if content_lower.startswith('/blurb'):
+            yield from self.handle_blurb(message, sport)
 
     def handle_baseball_request(self, message):
         sport = 'mlb'
