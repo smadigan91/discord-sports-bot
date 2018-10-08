@@ -4,6 +4,7 @@ import os
 
 from baseball_wrapper import get_log, get_highlight, get_baseball_blurb
 from football_wrapper import get_football_blurb, start_or_sit
+from basketball_wrapper import get_basketball_blurb
 from help_commands import get_help_text
 
 
@@ -116,6 +117,8 @@ class SportsClient(discord.Client):
                 blurb = get_baseball_blurb(first, last)
             elif sport == 'nfl':
                 blurb = get_football_blurb(first, last)
+            elif sport == 'nba':
+                blurb = get_basketball_blurb(first, last)
             else:
                 raise ValueError(f"Invalid value for 'sport': {sport}")
             embedded_blurb = discord.Embed(title=" ".join([first, last]).title(), description=blurb)
