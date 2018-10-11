@@ -16,7 +16,8 @@ class SportsClient(discord.Client):
             yield from self.handle_baseball_request(message)
         elif message.channel.name in ["american-football"]:
             yield from self.handle_football_request(message)
-        elif message.channel.name in ["basketball", "betterlatethannever"]:
+        elif message.channel.name in ["basketball", "better-late-than-never", "fuck-kevin-durant",
+                                      "people-order-our-patties"]:
             yield from self.handle_basketball_request(message)
 
     def handle_football_request(self, message):
