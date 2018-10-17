@@ -1,4 +1,4 @@
-import urllib.request
+import urllib
 import discord
 from util import NoResultsError, get_blurb, get_soup
 
