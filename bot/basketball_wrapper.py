@@ -81,6 +81,6 @@ def format_log(log_map):
     # **2018 - 04 - 11 * vs * MIL *
     title = f"**{name}**'s most recent game"
     log_string = f"**{date}** vs **{opp}**\n**MIN**: {mins} "\
-                 f"\n**PTS**: {pts} ({fgm}/{fga}, {fgp} **FG%**, {tpm}/{tpa} **3P**, {fta}/{ftm} **FT**)" \
+                 f"\n**PTS**: {pts} ({fgm}/{fga}, {fgp} **FG%**, {tpm}/{tpa} **3P**, {ftm}/{fta} **FT**)" \
                  f"\n**REB**: {reb}\n**AST**: {ast}\n**STL**: {stl}\n**BLK**: {blk}\n**PF**: {pf}\n**TO**: {to}"
     return discord.Embed(title=title, description=log_string)
