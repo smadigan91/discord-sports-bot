@@ -2,9 +2,9 @@ import asyncio
 import discord
 import os
 
-from baseball_wrapper import get_log, get_highlight, get_baseball_blurb
+from baseball_wrapper import get_highlight, get_baseball_blurb, get_log as get_baseball_log
 from football_wrapper import get_football_blurb, start_or_sit
-from basketball_wrapper import get_basketball_blurb
+from basketball_wrapper import get_basketball_blurb, get_log as get_basketball_log
 from help_commands import get_help_text
 
 
@@ -40,6 +40,14 @@ class SportsClient(discord.Client):
         # /blurb [firstname]* [lastname]*
         if content_lower.startswith('/blurb'):
             yield from self.handle_blurb(message, sport)
+        # /log [player]*
+        elif content_lower.startswith('/log'):
+            try:
+                search = " ".join(message.content.split()[1:])
+                embedded_stats = get_basketball_log(search)
+                yield from self.send_message(message.channel, embed=embedded_stats)
+            except Exception as ex:
+                yield from self.send_message(message.channel, content=str(ex))
 
     def handle_baseball_request(self, message):
         sport = 'mlb'
@@ -64,7 +72,7 @@ class SportsClient(discord.Client):
                     raise ValueError('A number of last days must be provided')
                 if len(msg) < 2:
                     raise ValueError('Must provide both a number of days and a name')
-                embedded_stats = get_log(" ".join(msg[1:]), last_days=days)
+                embedded_stats = get_baseball_log(" ".join(msg[1:]), last_days=days)
                 yield from self.send_message(message.channel, embed=embedded_stats)
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
@@ -72,7 +80,7 @@ class SportsClient(discord.Client):
         if content_lower.startswith('/log'):
             try:
                 search = " ".join(message.content.split()[1:])
-                embedded_stats = get_log(search)
+                embedded_stats = get_baseball_log(search)
                 yield from self.send_message(message.channel, embed=embedded_stats)
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
@@ -81,9 +89,9 @@ class SportsClient(discord.Client):
             msg = message.content.split()[1:]
             try:
                 if msg[0].isdigit():
-                    embedded_stats = get_log(" ".join(msg[1:]), season=True, season_year=msg[0])
+                    embedded_stats = get_baseball_log(" ".join(msg[1:]), season=True, season_year=msg[0])
                 else:
-                    embedded_stats = get_log(" ".join(msg), season=True)
+                    embedded_stats = get_baseball_log(" ".join(msg), season=True)
                 yield from self.send_message(message.channel, embed=embedded_stats)
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))

@@ -1,14 +1,13 @@
 from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
-from requests import get
+import urllib.request
 
 blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={last},{first}&sport={sport}'
 
 
 def get_blurb(first, last, sport, player_url=None):
     # for some weird reason its actually better to omit the first name in the search form
-    response = get(player_url if player_url else blurb_search_url.format(first="", last=last, sport=sport))
-    soup = BeautifulSoup(response.text, 'html.parser')
+    soup = get_soup(player_url if player_url else blurb_search_url.format(first="", last=last, sport=sport))
     # did we land a result page?
     if not soup.findChild('div', class_='RW_pn'):
         name_map = {}
@@ -34,6 +33,11 @@ def get_blurb(first, last, sport, player_url=None):
             return blurb
         else:
             raise NoResultsError("No recent player news for %s %s" % (first, last))
+
+
+def get_soup(url):
+    response = urllib.request.urlopen(url)
+    return BeautifulSoup(response.read().decode('utf-8'), 'html.parser')
 
 
 class NoResultsError(Exception):
