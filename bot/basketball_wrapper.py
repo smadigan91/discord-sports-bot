@@ -17,7 +17,7 @@ def get_log(search):
 
 
 def get_log_map(search):
-    name, table = get_player_log_table(search)
+    name, table = get_player_log_table(search=search)
     row = table.find_all('tr').pop()
     stat_map = {'name': name}
     for cell in row.findChildren('td'):
