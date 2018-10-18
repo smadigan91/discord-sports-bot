@@ -17,7 +17,7 @@ def get_log(search):
 
 
 def get_log_map(search):
-    name, table = get_player_log_table(search)
+    name, table = get_player_log_table(search=search)
     row = table.find_all('tr').pop()
     stat_map = {'name': name}
     for cell in row.findChildren('td'):
@@ -27,8 +27,8 @@ def get_log_map(search):
     return stat_map
 
 
-def get_player_log_table(search):
-    soup = get_soup(search_url.format(search=urllib.parse.quote(search)))
+def get_player_log_table(search=None, url=None):
+    soup = get_soup(url if url else search_url.format(search=urllib.parse.quote(search)))
     log_holder = soup.find('span', text="Game Logs")
     if log_holder:
         name_node = soup.find('h1', attrs={'itemprop': 'name'})
@@ -41,7 +41,7 @@ def get_player_log_table(search):
         nba_players = soup.find('div', attrs={"id": "players"})
         if nba_players:
             href = nba_players.find_next('div', class_='search-item-url').text
-            return get_player_log_table(bbref_url + href)
+            return get_player_log_table(url=bbref_url + href)
         else:
             raise NoResultsError("No NBA results for %s" % search)
     else:
@@ -84,3 +84,4 @@ def format_log(log_map):
                  f"\n**PTS**: {pts} ({fgm}/{fga}, {fgp} **FG%**, {tpm}/{tpa} **3P**, {ftm}/{fta} **FT**)" \
                  f"\n**REB**: {reb}\n**AST**: {ast}\n**STL**: {stl}\n**BLK**: {blk}\n**PF**: {pf}\n**TO**: {to}"
     return discord.Embed(title=title, description=log_string)
+
