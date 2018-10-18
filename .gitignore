@@ -3,3 +3,5 @@ __pycache__
 .pydevproject
 token.json
 .idea/
+env/
+venv/
