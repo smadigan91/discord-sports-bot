@@ -1,9 +1,12 @@
 import urllib
+import re
 import discord
 from util import NoResultsError, get_blurb, get_soup
+from difflib import SequenceMatcher
 
 bbref_url = 'https://www.basketball-reference.com'
 search_url = bbref_url + '/search/search.fcgi?search={search}'
+letters = re.compile('[^a-zA-Z]')
 
 
 def get_basketball_blurb(first, last):
@@ -40,8 +43,19 @@ def get_player_log_table(search=None, url=None):
     elif soup.findChild('div', class_='search-results'):
         nba_players = soup.find('div', attrs={"id": "players"})
         if nba_players:
-            href = nba_players.find_next('div', class_='search-item-url').text
-            return get_player_log_table(url=bbref_url + href)
+            results = nba_players.findChildren('div', class_='search-item')
+            if len(results) == 1:
+                href = nba_players.find_next('div', class_='search-item-url').text
+                return get_player_log_table(url=bbref_url + href)
+            else:
+                result_map = {}
+                for result in results:
+                    a = result.find_next('div', class_='search-item-name').find_next('a')
+                    name = letters.sub('', a.text)
+                    match = SequenceMatcher(None, search, name).ratio()
+                    result_map[a.get('href')] = match
+                href = sorted(result_map, key=result_map.get, reverse=True)[0]
+                return get_player_log_table(url=bbref_url + href)
         else:
             raise NoResultsError("No NBA results for %s" % search)
     else:
