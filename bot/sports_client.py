@@ -1,10 +1,12 @@
 import asyncio
 import discord
 import os
+import threading
+import schedule
 
 from baseball_wrapper import get_highlight, get_baseball_blurb, get_log as get_baseball_log
 from football_wrapper import get_football_blurb, start_or_sit
-from basketball_wrapper import get_basketball_blurb, get_log as get_basketball_log
+from basketball_wrapper import get_basketball_blurb, get_log as get_basketball_log, get_lowlight, get_highlight as get_bball_highlight
 from help_commands import get_help_text
 
 
@@ -46,6 +48,16 @@ class SportsClient(discord.Client):
                 search = " ".join(message.content.split()[1:])
                 embedded_stats = get_basketball_log(search)
                 yield from self.send_message(message.channel, embed=embedded_stats)
+            except Exception as ex:
+                yield from self.send_message(message.channel, content=str(ex))
+        elif content_lower.startswith('/highlight'):
+            try:
+                yield from self.do_bball_highlight(channel=message.channel, cached=True)
+            except Exception as ex:
+                yield from self.send_message(message.channel, content=str(ex))
+        elif content_lower.startswith('/lowlight'):
+            try:
+                yield from self.do_bball_lowlight(channel=message.channel)
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
 
@@ -135,9 +147,31 @@ class SportsClient(discord.Client):
         except Exception as ex:
             yield from self.send_message(message.channel, content=str(ex))
 
+    def get_channel_from_name(self, channel_name):
+        return discord.utils.get(client.get_all_channels(), name=channel_name)
+
+    def do_bball_highlight(self, channel=None, cached=False):
+        embed = get_bball_highlight(cached=cached)
+        if embed:
+            bball_channel = channel if channel else self.get_channel_from_name("basketball")
+            yield from self.send_message(bball_channel, embed=embed)
+
+    def do_bball_lowlight(self, channel=None):
+        embed = get_lowlight()
+        if embed:
+            bball_channel = channel if channel else self.get_channel_from_name("basketball")
+            yield from self.send_message(bball_channel, embed=embed)
+
+    def highlight_lowlight_job(self):
+        schedule.every().day.at("15:32").do(self.do_bball_highlight)
+        schedule.every().day.at("15:33").do(self.do_bball_lowlight)
+        while True:
+            schedule.run_pending()
+
 
 if __name__ == "__main__":
     # token = json.loads(open('token.json', 'r').read())["APP_TOKEN"]
     token = os.environ.get('TOKEN', '')
     client = SportsClient()
+    threading.Thread(target=client.highlight_lowlight_job)
     client.run(token)
