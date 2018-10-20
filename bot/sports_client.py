@@ -1,8 +1,7 @@
 import asyncio
 import discord
 import os
-import threading
-import schedule
+import datetime
 
 from baseball_wrapper import get_highlight, get_baseball_blurb, get_log as get_baseball_log
 from football_wrapper import get_football_blurb, start_or_sit
@@ -52,7 +51,7 @@ class SportsClient(discord.Client):
                 yield from self.send_message(message.channel, content=str(ex))
         elif content_lower.startswith('/highlight'):
             try:
-                yield from self.do_bball_highlight(channel=message.channel, cached=True)
+                yield from self.do_bball_highlight(channel=message.channel)
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
         elif content_lower.startswith('/lowlight'):
@@ -150,28 +149,44 @@ class SportsClient(discord.Client):
     def get_channel_from_name(self, channel_name):
         return discord.utils.get(client.get_all_channels(), name=channel_name)
 
-    def do_bball_highlight(self, channel=None, cached=False):
-        embed = get_bball_highlight(cached=cached)
+    async def highlight_lowlight_loop(self):
+        await self.wait_until_ready()
+        channel = self.get_channel_from_name("basketball")
+        while not self.is_closed:
+            # check time every minute
+            now = datetime.datetime.now()
+            if now.hour == 9 and now.minute == 30:
+                embed = get_bball_highlight()
+                if embed:
+                    await self.send_message(channel, embed=embed)
+                else:
+                    await self.send_message(channel, content="No highlight of the day yesterday")
+            elif now.hour == 10 and now.minute == 0:
+                embed = get_lowlight()
+                if embed:
+                    await self.send_message(channel, embed=embed)
+                else:
+                    await self.send_message(channel, content="No lowlight of the day yesterday")
+            await asyncio.sleep(60)
+
+    def do_bball_highlight(self, channel=None):
+        embed = get_bball_highlight()
         if embed:
-            bball_channel = channel if channel else self.get_channel_from_name("basketball")
-            yield from self.send_message(bball_channel, embed=embed)
+            yield from self.send_message(channel, embed=embed)
+        else:
+            yield from self.send_message(channel, content="No highlight of the day yesterday")
 
     def do_bball_lowlight(self, channel=None):
         embed = get_lowlight()
         if embed:
-            bball_channel = channel if channel else self.get_channel_from_name("basketball")
-            yield from self.send_message(bball_channel, embed=embed)
-
-    def highlight_lowlight_job(self):
-        schedule.every().day.at("15:32").do(self.do_bball_highlight)
-        schedule.every().day.at("15:33").do(self.do_bball_lowlight)
-        while True:
-            schedule.run_pending()
+            yield from self.send_message(channel, embed=embed)
+        else:
+            yield from self.send_message(channel, content="No lowlight of the day yesterday")
 
 
 if __name__ == "__main__":
     # token = json.loads(open('token.json', 'r').read())["APP_TOKEN"]
-    token = os.environ.get('TOKEN', '')
     client = SportsClient()
-    threading.Thread(target=client.highlight_lowlight_job)
+    token = os.environ.get('TOKEN', '')
+    client.loop.create_task(client.highlight_lowlight_loop())
     client.run(token)

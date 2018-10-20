@@ -11,9 +11,6 @@ top_url = bbref_url + '/friv/dailyleaders.fcgi'
 letters = re.compile('[^a-zA-Z]')
 DEBUG = False
 
-highlight_map = {}
-lowlight_map = {}
-
 
 def get_basketball_blurb(first, last):
     return get_blurb(first, last, 'nba')
@@ -25,21 +22,21 @@ def get_log(search):
     return embed
 
 
-def get_highlight(cached=False):
-    if not cached:
-        populate_highlight_lowlight()
-    if not highlight_map:
-        return None
-    title = "Yesterday's stat line of the day: **%s**"
-    embed = format_log(highlight_map, title=title)
+def get_highlight():
+    highlight_map = get_highlight_lowlight_map(highlight=True)
+    embed = None
+    if highlight_map:
+        title = "Stat line of the day for **{date}**: **{player}** vs **{opp}**"
+        embed = format_log(highlight_map, title=title, highlight_lowlight=True)
     return embed
 
 
 def get_lowlight():
-    if not lowlight_map:
-        return None
-    title = "Yesterday's lowlight of the day: **%s%%"
-    embed = format_log(lowlight_map, title=title)
+    lowlight_map = get_highlight_lowlight_map(highlight=False)
+    embed = None
+    if lowlight_map:
+        title = "Lowlight of the day for **{date}**: **{player}** vs **{opp}**"
+        embed = format_log(lowlight_map, title=title, highlight_lowlight=True)
     return embed
 
 
@@ -67,22 +64,20 @@ def index_row(row):
     return stat_map
 
 
-# returns a tuple of the maps
-def populate_highlight_lowlight():
-    global highlight_map, lowlight_map
+def get_highlight_lowlight_map(highlight=True):
     top_soup = get_soup(top_url)
     table = top_soup.find('table', attrs={'id': 'stats'})
     if not table:
-        highlight_map = lowlight_map = {}
         return None
     else:
         rows = table.find('tbody').findChildren(lambda tag: tag.name == 'tr' and not 'thead' == tag.get('class')
                                                 and tag.findChild(lambda child: child.name == 'td'
-                                                and child.get('data-stat') == 'mp'
-                                                    and int(child.text.split(':')[0]) >= 25)
-                                                )
-        highlight_map = index_row(rows[0])
-        lowlight_map = index_row(rows[-1])
+                                                                  and child.get('data-stat') == 'mp'
+                                                                  and int(child.text.split(':')[0]) >= 25))
+    if highlight:
+        return index_row(rows[0])
+    else:
+        return index_row(rows[-1])
 
 
 def get_player_log_table(search=None, url=None):
@@ -128,8 +123,7 @@ def get_stat(row, stat, default='0'):
         return default
 
 
-def format_log(log_map, title="**%s**'s most recent game"):
-    title = title % log_map['name']
+def format_log(log_map, title="**{player}**'s most recent game", highlight_lowlight=False):
     date = log_map['date_game']
     opp = log_map['opp_id']
     mins = log_map['mp']
@@ -147,11 +141,16 @@ def format_log(log_map, title="**%s**'s most recent game"):
     blk = log_map['blk']
     pf = log_map['pf']
     to = log_map['tov']
-    log_string = f"**{date}** vs **{opp}**\n**MIN**: {mins} "\
-                 f"\n**PTS**: {pts} ({fgm}/{fga}, {fgp} **FG%**, {tpm}/{tpa} **3P**, {ftm}/{fta} **FT**)" \
+    name = log_map['name']
+    if not highlight_lowlight:
+        title = title.format(player=name)
+    else:
+        title = title.format(player=name, date=date, opp=opp)
+    date_header = f"**{date}** vs **{opp}**\n"
+    log_string = (date_header if not highlight_lowlight else "") + \
+                 f"**MIN**: {mins}\n**PTS**: {pts} ({fgm}/{fga}, {fgp} **FG%**, {tpm}/{tpa} **3P**, {ftm}/{fta} **FT**)" \
                  f"\n**REB**: {reb}\n**AST**: {ast}\n**STL**: {stl}\n**BLK**: {blk}\n**TO**: {to}\n**PF**: {pf}"
     if DEBUG:
         print(title)
         print(log_string)
     return discord.Embed(title=title, description=log_string)
-
