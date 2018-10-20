@@ -2,11 +2,14 @@ import urllib
 import re
 import discord
 from util import NoResultsError, get_blurb, get_soup
+from datetime import datetime
 from difflib import SequenceMatcher
 
 bbref_url = 'https://www.basketball-reference.com'
 search_url = bbref_url + '/search/search.fcgi?search={search}'
+top_url = bbref_url + '/friv/dailyleaders.fcgi'
 letters = re.compile('[^a-zA-Z]')
+DEBUG = False
 
 
 def get_basketball_blurb(first, last):
@@ -19,15 +22,62 @@ def get_log(search):
     return embed
 
 
+def get_highlight():
+    highlight_map = get_highlight_lowlight_map(highlight=True)
+    embed = None
+    if highlight_map:
+        title = "Stat line of the day for **{date}**: **{player}** vs **{opp}**"
+        embed = format_log(highlight_map, title=title, highlight_lowlight=True)
+    return embed
+
+
+def get_lowlight():
+    lowlight_map = get_highlight_lowlight_map(highlight=False)
+    embed = None
+    if lowlight_map:
+        title = "Lowlight of the day for **{date}**: **{player}** vs **{opp}**"
+        embed = format_log(lowlight_map, title=title, highlight_lowlight=True)
+    return embed
+
+
 def get_log_map(search):
     name, table = get_player_log_table(search=search)
     row = table.find_all('tr').pop()
-    stat_map = {'name': name}
+    stat_map = index_row(row)
+    stat_map['name'] = name
+    return stat_map
+
+
+def index_row(row):
+    stat_map = {}
     for cell in row.findChildren('td'):
         stat = cell.get('data-stat', default=None)
         if stat:
-            stat_map[stat] = cell.text
+            if stat == 'player':
+                stat_map['name'] = cell.text
+            else:
+                stat_map[stat] = cell.text
+    if 'date_game' not in stat_map:
+        stat_map['date_game'] = datetime.today().strftime('%Y-%m-%d')
+    if DEBUG:
+        print(stat_map)
     return stat_map
+
+
+def get_highlight_lowlight_map(highlight=True):
+    top_soup = get_soup(top_url)
+    table = top_soup.find('table', attrs={'id': 'stats'})
+    if not table:
+        return None
+    else:
+        rows = table.find('tbody').findChildren(lambda tag: tag.name == 'tr' and not 'thead' == tag.get('class')
+                                                and tag.findChild(lambda child: child.name == 'td'
+                                                                  and child.get('data-stat') == 'mp'
+                                                                  and int(child.text.split(':')[0]) >= 25))
+    if highlight:
+        return index_row(rows[0])
+    else:
+        return index_row(rows[-1])
 
 
 def get_player_log_table(search=None, url=None):
@@ -73,8 +123,7 @@ def get_stat(row, stat, default='0'):
         return default
 
 
-def format_log(log_map):
-    name = log_map['name']
+def format_log(log_map, title="**{player}**'s most recent game", highlight_lowlight=False):
     date = log_map['date_game']
     opp = log_map['opp_id']
     mins = log_map['mp']
@@ -92,10 +141,16 @@ def format_log(log_map):
     blk = log_map['blk']
     pf = log_map['pf']
     to = log_map['tov']
-    # **2018 - 04 - 11 * vs * MIL *
-    title = f"**{name}**'s most recent game"
-    log_string = f"**{date}** vs **{opp}**\n**MIN**: {mins} "\
-                 f"\n**PTS**: {pts} ({fgm}/{fga}, {fgp} **FG%**, {tpm}/{tpa} **3P**, {ftm}/{fta} **FT**)" \
-                 f"\n**REB**: {reb}\n**AST**: {ast}\n**STL**: {stl}\n**BLK**: {blk}\n**PF**: {pf}\n**TO**: {to}"
+    name = log_map['name']
+    if not highlight_lowlight:
+        title = title.format(player=name)
+    else:
+        title = title.format(player=name, date=date, opp=opp)
+    date_header = f"**{date}** vs **{opp}**\n"
+    log_string = (date_header if not highlight_lowlight else "") + \
+                 f"**MIN**: {mins}\n**PTS**: {pts} ({fgm}/{fga}, {fgp} **FG%**, {tpm}/{tpa} **3P**, {ftm}/{fta} **FT**)" \
+                 f"\n**REB**: {reb}\n**AST**: {ast}\n**STL**: {stl}\n**BLK**: {blk}\n**TO**: {to}\n**PF**: {pf}"
+    if DEBUG:
+        print(title)
+        print(log_string)
     return discord.Embed(title=title, description=log_string)
-
