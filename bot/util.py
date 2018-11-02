@@ -37,7 +37,7 @@ def get_blurb(first, last, sport, player_url=None):
 
 def get_soup(url):
     response = urllib.request.urlopen(url)
-    return BeautifulSoup(response.read().decode('utf-8'), 'html.parser')
+    return BeautifulSoup(response.read().decode("ISO-8859-1"), 'html.parser')
 
 
 class NoResultsError(Exception):
