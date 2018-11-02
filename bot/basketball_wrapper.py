@@ -7,6 +7,7 @@ from difflib import SequenceMatcher
 
 bbref_url = 'https://www.basketball-reference.com'
 search_url = bbref_url + '/search/search.fcgi?search={search}'
+espn_search_url = 'http://www.espn.com/nba/players/_/search/{search}'
 top_url = bbref_url + '/friv/dailyleaders.fcgi'
 letters = re.compile('[^a-zA-Z]')
 DEBUG = False
@@ -19,6 +20,13 @@ def get_basketball_blurb(first, last):
 def get_log(search):
     log_map = get_log_map(search)
     embed = format_log(log_map)
+    return embed
+
+
+def get_live_log(search):
+    live_log_map = get_live_log_map(search)
+    title = "Live(ish) stats for **{player}** vs **{opp}** @ **{date}**"
+    embed = format_log(live_log_map, title=title, live=True)
     return embed
 
 
@@ -46,6 +54,76 @@ def get_log_map(search):
     stat_map = index_row(row)
     stat_map['name'] = name
     return stat_map
+
+
+def get_live_log_map(search, url=None):
+    full_search = ' '.join(search)
+    if url:
+        soup = get_soup(url)
+    else:
+        last_name = format_live_search(search)
+        soup = get_soup(espn_search_url.format(search=last_name))
+    profile = soup.findChild('td', class_='profile-overview')
+    if profile:
+        try:
+            name = soup.find('div', class_='main-headshot').find_next('h1').text
+            if 'CURRENT' in profile.find_next('h4').text:
+                log_map = {}
+                qtr = soup.find('li', class_='game-clock')  # .text.replace('"', '')
+                time_left = qtr.find_next('span').text
+                log_header = profile.find_next(lambda tag: tag.name == 'h4' and tag.text == 'GAME LOG')
+                stats = log_header.find_next('table', class_='tablehead').findChildren('td')
+                log_map['date_game'] = '{}, {}'.format(qtr.text.replace('"', '').replace(time_left, ''), time_left)
+                log_map['opp_id'] = stats[1].find_next('a').find_next('a').text
+                log_map['mp'] = stats[3].text
+                fgm_fga = stats[4].text.split('-')
+                log_map['fg'] = fgm_fga[0]
+                log_map['fga'] = fgm_fga[1]
+                log_map['fg_pct'] = stats[5].text
+                tpm_tpa = stats[6].text.split('-')
+                log_map['fg3'] = tpm_tpa[0]
+                log_map['fg3a'] = tpm_tpa[1]
+                ftm_fta = stats[8].text.split('-')
+                log_map['ft'] = ftm_fta[0]
+                log_map['fta'] = ftm_fta[1]
+                log_map['trb'] = stats[10].text
+                log_map['ast'] = stats[11].text
+                log_map['blk'] = stats[12].text
+                log_map['stl'] = stats[13].text
+                log_map['pf'] = stats[14].text
+                log_map['tov'] = stats[15].text
+                log_map['pts'] = stats[16].text
+                log_map['name'] = name
+                return log_map
+            else:
+                raise NoResultsError(f"{name} isn't currently playing")
+        except Exception as ex:
+            raise ex
+    else:
+        results_table = soup.find('div', attrs={'id': 'my-players-table'}).find_next('table')
+        col_header = results_table.findChild('tr', class_='colhead')
+        if col_header:
+            player_results = results_table.findChildren(lambda tag: tag.name == 'tr' and tag.get('class') not in ['stathead', 'colhead'])
+            result_map = {}
+            for result in player_results:
+                a = result.find_next('a')
+                name = a.text.split(', ')
+                name = f'{name[1]} {name[0]}'
+                match = SequenceMatcher(None, full_search, name).ratio()
+                result_map[a.get('href')] = match
+            player_href = sorted(result_map, key=result_map.get, reverse=True)[0]
+            return get_live_log_map(search, player_href)
+        else:
+            raise NoResultsError(f"No results for '{full_search}'")
+
+
+def format_live_search(search):
+    if len(search) == 2 or len(search) == 3:
+        return search[1]
+    elif len(search) == 1:
+        return search[0]
+    else:
+        raise ValueError('Malformed search string or something?')
 
 
 def index_row(row):
@@ -112,18 +190,7 @@ def get_player_log_table(search=None, url=None):
         raise NoResultsError("No results for %s" % search)
 
 
-def get_stat(row, stat, default='0'):
-    try:
-        cell = row.find('td', attrs={'data-stat': stat})
-        if cell.text:
-            return cell.text
-        else:
-            return default
-    except Exception:
-        return default
-
-
-def format_log(log_map, title="**{player}**'s most recent game", highlight_lowlight=False):
+def format_log(log_map, title="**{player}**'s most recent game", highlight_lowlight=False, live=False):
     date = log_map['date_game']
     opp = log_map['opp_id']
     mins = log_map['mp']
@@ -142,15 +209,16 @@ def format_log(log_map, title="**{player}**'s most recent game", highlight_lowli
     pf = log_map['pf']
     to = log_map['tov']
     name = log_map['name']
-    if not highlight_lowlight:
-        title = title.format(player=name)
-    else:
+    if highlight_lowlight or live:
         title = title.format(player=name, date=date, opp=opp)
+    else:
+        title = title.format(player=name)
     date_header = f"**{date}** vs **{opp}**\n"
-    log_string = (date_header if not highlight_lowlight else "") + \
+    log_string = (date_header if not (highlight_lowlight or live) else "") + \
                  f"**MIN**: {mins}\n**PTS**: {pts} ({fgm}/{fga}, {fgp} **FG%**, {tpm}/{tpa} **3P**, {ftm}/{fta} **FT**)" \
                  f"\n**REB**: {reb}\n**AST**: {ast}\n**STL**: {stl}\n**BLK**: {blk}\n**TO**: {to}\n**PF**: {pf}"
     if DEBUG:
         print(title)
         print(log_string)
     return discord.Embed(title=title, description=log_string)
+

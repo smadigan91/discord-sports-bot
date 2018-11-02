@@ -5,7 +5,8 @@ import datetime
 
 from baseball_wrapper import get_highlight, get_baseball_blurb, get_log as get_baseball_log
 from football_wrapper import get_football_blurb, start_or_sit
-from basketball_wrapper import get_basketball_blurb, get_log as get_basketball_log, get_lowlight, get_highlight as get_bball_highlight
+from basketball_wrapper import get_basketball_blurb, get_log as get_basketball_log, get_lowlight, \
+    get_highlight as get_bball_highlight, get_live_log
 from help_commands import get_help_text
 
 
@@ -57,6 +58,13 @@ class SportsClient(discord.Client):
         elif content_lower.startswith('/lowlight'):
             try:
                 yield from self.do_bball_lowlight(channel=message.channel)
+            except Exception as ex:
+                yield from self.send_message(message.channel, content=str(ex))
+        elif content_lower.startswith('/live'):
+            try:
+                search = message.content.split()[1:]
+                embedded_stats = get_live_log(search)
+                yield from self.send_message(message.channel, embed=embedded_stats)
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
 
