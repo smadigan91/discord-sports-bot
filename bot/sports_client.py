@@ -163,13 +163,13 @@ class SportsClient(discord.Client):
         while not self.is_closed:
             # check time every minute
             now = datetime.datetime.now()
-            if now.hour == 13 and now.minute == 30:
+            if now.hour == 14 and now.minute == 30:
                 embed = get_bball_highlight()
                 if embed:
                     await self.send_message(channel, embed=embed)
                 else:
                     await self.send_message(channel, content="No highlight of the day yesterday")
-            elif now.hour == 14 and now.minute == 0:
+            elif now.hour == 15 and now.minute == 0:
                 embed = get_lowlight()
                 if embed:
                     await self.send_message(channel, embed=embed)
