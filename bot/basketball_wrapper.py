@@ -68,14 +68,13 @@ def get_live_log_map(search, url=None):
         try:
             name = soup.find('div', class_='main-headshot').find_next('h1').text
             qtr = soup.find('li', class_='game-clock')
-            halftime = 'Halftime' in qtr.text
-            if 'CURRENT' in profile.find_next('h4').text or halftime:
+            end_qtr = 'Halftime' in qtr.text or 'End' in qtr.text
+            if 'CURRENT' in profile.find_next('h4').text or end_qtr:
                 log_map = {}
-                  # .text.replace('"', '')
                 time_left = qtr.find_next('span').text
                 log_header = profile.find_next(lambda tag: tag.name == 'h4' and tag.text == 'GAME LOG')
                 stats = log_header.find_next('table', class_='tablehead').findChildren('td')
-                log_map['date_game'] = 'Halftime' if halftime else '{}, {}'.format(qtr.text.replace('"', '').replace(time_left, ''), time_left)
+                log_map['date_game'] = qtr.text.rstrip() if end_qtr else '{}, {}'.format(qtr.text.replace('"', '').replace(time_left, ''), time_left)
                 log_map['opp_id'] = stats[1].find_next('a').find_next('a').text
                 log_map['mp'] = stats[3].text
                 fgm_fga = stats[4].text.split('-')
