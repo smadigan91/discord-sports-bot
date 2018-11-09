@@ -50,7 +50,7 @@ def get_lowlight():
 
 def get_log_map(search):
     name, table = get_player_log_table(search=search)
-    row = table.find_all('tr').pop()
+    row = table.find_all(lambda tag: tag.name == 'tr' and 'pgl_basic' in tag.get('id', '')).pop()
     stat_map = index_row(row)
     stat_map['name'] = name
     return stat_map
@@ -159,23 +159,29 @@ def get_highlight_lowlight_map(highlight=True):
         return index_row(rows[-1])
 
 
-def get_player_log_table(search=None, url=None):
+def get_player_log_table(search=None):
+    soup = get_player_page(search)
+    log_holder = soup.find('span', text="Game Logs")
+    name_node = soup.find('h1', attrs={'itemprop': 'name'})
+    name = name_node.text
+    href = log_holder.find_next('div').find('ul').findChildren('a').pop().get('href')
+    log_soup = get_soup(bbref_url + href)
+    table = log_soup.find('table', attrs={'id': 'pgl_basic'}).find('tbody')
+    return name, table
+
+
+def get_player_page(search=None, url=None):
     soup = get_soup(url if url else search_url.format(search=urllib.parse.quote(search)))
     log_holder = soup.find('span', text="Game Logs")
     if log_holder:
-        name_node = soup.find('h1', attrs={'itemprop': 'name'})
-        name = name_node.text
-        href = log_holder.find_next('div').find('ul').findChildren('a').pop().get('href')
-        log_soup = get_soup(bbref_url + href)
-        table = log_soup.find('table', attrs={'id': 'pgl_basic'}).find('tbody')
-        return name, table
+        return soup
     elif soup.findChild('div', class_='search-results'):
         nba_players = soup.find('div', attrs={"id": "players"})
         if nba_players:
             results = nba_players.findChildren('div', class_='search-item')
             if len(results) == 1:
                 href = nba_players.find_next('div', class_='search-item-url').text
-                return get_player_log_table(url=bbref_url + href)
+                return get_player_page(url=bbref_url + href)
             else:
                 result_map = {}
                 for result in results:
@@ -184,7 +190,7 @@ def get_player_log_table(search=None, url=None):
                     match = SequenceMatcher(None, search, name).ratio()
                     result_map[a.get('href')] = match
                 href = sorted(result_map, key=result_map.get, reverse=True)[0]
-                return get_player_log_table(url=bbref_url + href)
+                return get_player_page(url=bbref_url + href)
         else:
             raise NoResultsError("No NBA results for %s" % search)
     else:
