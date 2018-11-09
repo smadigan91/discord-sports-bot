@@ -7,6 +7,7 @@ from difflib import SequenceMatcher
 
 bbref_url = 'https://www.basketball-reference.com'
 search_url = bbref_url + '/search/search.fcgi?search={search}'
+last_url = bbref_url + '/play-index/span_stats.cgi?html=1&page_id={page_id}&table_id=pgl_basic&range={last}-{career}'
 espn_search_url = 'http://www.espn.com/nba/players/_/search/{search}'
 top_url = bbref_url + '/friv/dailyleaders.fcgi'
 letters = re.compile('[^a-zA-Z]')
@@ -23,10 +24,17 @@ def get_log(search):
     return embed
 
 
+def get_last(search, last):
+    avg_log_map = get_avg_map(search, last)
+    title = "Average stats for **{player}** over his last " + f"{last} games"
+    embed = format_log(avg_log_map, title=title, add_date_header=False)
+    return embed
+
+
 def get_live_log(search):
     live_log_map = get_live_log_map(search)
     title = "Live(ish) stats for **{player}** vs **{opp}** @ **{date}**"
-    embed = format_log(live_log_map, title=title, live=True)
+    embed = format_log(live_log_map, title=title, name_only=False, add_date_header=False)
     return embed
 
 
@@ -35,7 +43,7 @@ def get_highlight():
     embed = None
     if highlight_map:
         title = "Stat line of the day for **{date}**: **{player}** vs **{opp}**"
-        embed = format_log(highlight_map, title=title, highlight_lowlight=True)
+        embed = format_log(highlight_map, title=title, name_only=False, add_date_header=False)
     return embed
 
 
@@ -44,13 +52,21 @@ def get_lowlight():
     embed = None
     if lowlight_map:
         title = "Lowlight of the day for **{date}**: **{player}** vs **{opp}**"
-        embed = format_log(lowlight_map, title=title, highlight_lowlight=True)
+        embed = format_log(lowlight_map, title=title, name_only=False, add_date_header=False)
     return embed
 
 
 def get_log_map(search):
     name, table = get_player_log_table(search=search)
     row = table.find_all(lambda tag: tag.name == 'tr' and 'pgl_basic' in tag.get('id', '')).pop()
+    stat_map = index_row(row)
+    stat_map['name'] = name
+    return stat_map
+
+
+def get_avg_map(search, last):
+    name, table = get_avg_log_table(search=search, last=last)
+    row = table.findChild('tr')
     stat_map = index_row(row)
     stat_map['name'] = name
     return stat_map
@@ -159,14 +175,27 @@ def get_highlight_lowlight_map(highlight=True):
         return index_row(rows[-1])
 
 
-def get_player_log_table(search=None):
-    soup = get_player_page(search)
-    log_holder = soup.find('span', text="Game Logs")
-    name_node = soup.find('h1', attrs={'itemprop': 'name'})
+def get_player_log_table(search):
+    player_soup = get_player_page(search)
+    log_holder = player_soup.find('span', text="Game Logs")
+    name_node = player_soup.find('h1', attrs={'itemprop': 'name'})
     name = name_node.text
     href = log_holder.find_next('div').find('ul').findChildren('a').pop().get('href')
     log_soup = get_soup(bbref_url + href)
     table = log_soup.find('table', attrs={'id': 'pgl_basic'}).find('tbody')
+    return name, table
+
+
+def get_avg_log_table(search, last):
+    player_soup = get_player_page(search)
+    career_games = int(player_soup.find('h4', class_='poptip', attrs={'data-tip': 'Games'}).find_next('p').find_next('p').text)
+    name_node = player_soup.find('h1', attrs={'itemprop': 'name'})
+    name = name_node.text
+    if last > career_games:
+        raise ValueError(f'{name} has only played {career_games} career games')
+    page_id = player_soup.find('link', attrs={'rel': 'canonical'}).get('href').split('/')[-1].split('.')[0]
+    log_soup = get_soup(last_url.format(page_id=page_id, last=career_games - last + 1, career=career_games))
+    table = log_soup.find('table', attrs={'id': 'pgl_basic_span'}).find('tbody')
     return name, table
 
 
@@ -197,9 +226,9 @@ def get_player_page(search=None, url=None):
         raise NoResultsError("No results for %s" % search)
 
 
-def format_log(log_map, title="**{player}**'s most recent game", highlight_lowlight=False, live=False):
-    date = log_map['date_game']
-    opp = log_map['opp_id']
+def format_log(log_map, title="**{player}**'s most recent game", name_only=True, add_date_header=True):
+    date = log_map.get('date_game', None)
+    opp = log_map.get('opp_id', None)
     mins = log_map['mp']
     pts = log_map['pts']
     fgm = log_map['fg']
@@ -216,12 +245,12 @@ def format_log(log_map, title="**{player}**'s most recent game", highlight_lowli
     pf = log_map['pf']
     to = log_map['tov']
     name = log_map['name']
-    if highlight_lowlight or live:
-        title = title.format(player=name, date=date, opp=opp)
-    else:
+    if name_only:
         title = title.format(player=name)
+    else:
+        title = title.format(player=name, date=date, opp=opp)
     date_header = f"**{date}** vs **{opp}**\n"
-    log_string = (date_header if not (highlight_lowlight or live) else "") + \
+    log_string = (date_header if add_date_header else "") + \
                  f"**MIN**: {mins}\n**PTS**: {pts} ({fgm}/{fga}, {fgp} **FG%**, {tpm}/{tpa} **3P**, {ftm}/{fta} **FT**)" \
                  f"\n**REB**: {reb}\n**AST**: {ast}\n**STL**: {stl}\n**BLK**: {blk}\n**TO**: {to}\n**PF**: {pf}"
     if DEBUG:
