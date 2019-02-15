@@ -55,8 +55,8 @@ def get_highlight(search, index=0, list_index=False):
             raise NoResultsError(f'Error parsing video url for {search}')
 
 
-def get_baseball_blurb(first, last):
-    return get_blurb(first, last, 'mlb')
+def get_baseball_blurb(search):
+    return get_blurb(search, 'mlb')
 
 
 def get_log(search, stat_type=None, player_url=None, date=None, last_days=None, date_range=None, season=False, season_year=None, most_recent=True):

@@ -10,8 +10,8 @@ player_search_url = 'https://www.fantasypros.com/ajax/players.php?callback=searc
 DEBUG = False
 
 
-def get_football_blurb(first, last):
-    return get_blurb(first, last, 'nfl')
+def get_football_blurb(search):
+    return get_blurb(search, 'nfl')
 
 
 # will need to actually do the search to get the most likely results for players who arent uniquely named
