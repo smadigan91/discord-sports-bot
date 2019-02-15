@@ -82,7 +82,7 @@ def get_live_log_map(search, url=None):
     profile = soup.findChild('td', class_='profile-overview')
     if profile:
         try:
-            name = soup.find('div', class_='main-headshot').find_next('h1').text
+            name = soup.find('meta', attrs={'property': 'og:title'}).get('content')
             qtr = soup.find('li', class_='game-clock')
             if qtr:
                 log_map = {}
