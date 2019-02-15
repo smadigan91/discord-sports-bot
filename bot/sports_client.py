@@ -149,7 +149,7 @@ class SportsClient(discord.Client):
     def handle_blurb(self, message, sport):
         msg = message.content.split()[1:]
         try:
-            search = msg[0:]
+            search = " ".join(msg[0:])
             if not search:
                 raise ValueError('A name must be provided')
             if sport == 'mlb':
