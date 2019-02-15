@@ -1,48 +1,42 @@
 from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
-from urllib import request, parse
-from requests_html import HTMLSession
-import json
+import urllib.request
 
-base_url = 'https://www.rotoworld.com'
-blurb_search_url = "https://search.rotoworld.com/players?query={search}&league={sport}"
-# blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={last},{first}&sport={sport}'
+blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={last},{first}&sport={sport}'
 
 
-def get_blurb(search, sport):
+def get_blurb(first, last, sport, player_url=None):
     # for some weird reason its actually better to omit the first name in the search form
-    req = request.Request(blurb_search_url.format(search=parse.quote(search), sport=sport))
-    req.add_header('x-api-key', 'vWahHcUV5n6xPc9GAnzpX55O0ny1CR5Z2vOFoht0')
-    response = get_soup(req)
-    json_response = json.loads(response.text)["responses"]
-    if not json_response:
-        raise NoResultsError(f"No recent player news for {search}")
-    name_map = {}
-    for result in json_response:
-        total = result['hits']['total']
-        if total == 0:
-            continue
-        player = result['hits']['hits'][0]['_source']
-        player_name = player['full_name']
-        name_map[(player['profile_url'], player_name)] = SequenceMatcher(None, search, player_name).ratio()
-    sorted_names = sorted(name_map, key=name_map.get, reverse=True)
-    profile_url = sorted_names[0][0]
-    player_name = sorted_names[0][1]
-    session = HTMLSession()
-    html = session.get(f'{base_url}{profile_url}').html
-    html.render()
-    player_block = html.find('div[id=block-mainpagecontent-2]')[0]
-    title = player_block.find('div[class=player-news-article__title]')[0].find('h1')[0]
-    summary = player_block.find('div[class=player-news-article__summary]')[0].find('p')[0]
-    timestamp = player_block.find('div[class=player-news-article__timestamp]')[0]
-    if not title:
-        raise NoResultsError(f"No recent player news for {search}")
-    blurb = title.text + '\n\n' + summary.text + '\n' + timestamp.text
-    return blurb, player_name
+    soup = get_soup(player_url if player_url else blurb_search_url.format(first="", last=last, sport=sport))
+    # did we land a result page?
+    if not soup.findChild('div', class_='RW_pn'):
+        name_map = {}
+        results_table = soup.find('table', attrs={'id':'cp1_tblSearchResults'})
+        # filter results, omitting duplicate "position" links that don't include the player's name
+        filtered_results = results_table.findChildren(lambda tag: tag.name == 'a' and 'player' in tag['href'] and len(tag.text) > 3)
+        if not filtered_results:
+            raise NoResultsError("No results for %s %s" % (first, last))
+        else:
+            for result in filtered_results:
+                name = " ".join(result.text.split())
+                name_map[result] = SequenceMatcher(None, first + " " + last, name).ratio()
+        # sort names by similarity to search criteria
+        sorted_names = sorted(name_map, key=name_map.get, reverse=True)
+        return get_blurb(first, last, sport, player_url='http://www.rotoworld.com' + sorted_names[0].get('href'))
+    else:
+        news = soup.findChildren('div', class_='playernews')
+        if news:
+            recent_news = news[0]
+            report = recent_news.find('div', class_='report')
+            impact = recent_news.find('div', class_='impact')
+            blurb = report.text + '\n\n' + impact.text
+            return blurb
+        else:
+            raise NoResultsError("No recent player news for %s %s" % (first, last))
 
 
 def get_soup(url):
-    response = request.urlopen(url)
+    response = urllib.request.urlopen(url)
     return BeautifulSoup(response.read().decode("ISO-8859-1"), 'html.parser')
 
 
@@ -53,5 +47,3 @@ class NoResultsError(Exception):
     def __init__(self, message):
         super().__init__(message)
         self.message = message
-
-

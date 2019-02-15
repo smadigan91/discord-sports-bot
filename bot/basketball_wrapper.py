@@ -14,8 +14,8 @@ letters = re.compile('[^a-zA-Z]')
 DEBUG = False
 
 
-def get_basketball_blurb(search):
-    return get_blurb(search, 'nba')
+def get_basketball_blurb(first, last):
+    return get_blurb(first, last, 'nba')
 
 
 def get_log(search):

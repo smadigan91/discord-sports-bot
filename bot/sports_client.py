@@ -149,18 +149,19 @@ class SportsClient(discord.Client):
     def handle_blurb(self, message, sport):
         msg = message.content.split()[1:]
         try:
-            search = msg[0:]
-            if not search:
-                raise ValueError('A name must be provided')
+            first = msg[0]
+            last = " ".join(msg[1:])  # hopefully handles the Jrs
+            if not first or not last:
+                raise ValueError('A first and last name must be provided')
             if sport == 'mlb':
-                blurb, name = get_baseball_blurb(search)
+                blurb = get_baseball_blurb(first, last)
             elif sport == 'nfl':
-                blurb, name = get_football_blurb(search)
+                blurb = get_football_blurb(first, last)
             elif sport == 'nba':
-                blurb, name = get_basketball_blurb(search)
+                blurb = get_basketball_blurb(first, last)
             else:
                 raise ValueError(f"Invalid value for 'sport': {sport}")
-            embedded_blurb = discord.Embed(title=name, description=blurb)
+            embedded_blurb = discord.Embed(title=" ".join([first, last]).title(), description=blurb)
             yield from self.send_message(message.channel, embed=embedded_blurb)
         except Exception as ex:
             yield from self.send_message(message.channel, content=str(ex))
