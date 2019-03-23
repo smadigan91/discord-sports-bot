@@ -1,13 +1,12 @@
 from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
 from urllib import request, parse
-from requests_html import AsyncHTMLSession
-import asyncio
+from requests_html import HTMLSession
 import json
 
 base_url = 'https://www.rotoworld.com'
 blurb_search_url = "https://search.rotoworld.com/players?query={search}&league={sport}"
-asession = AsyncHTMLSession()
+session = HTMLSession()
 # blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={last},{first}&sport={sport}'
 
 
@@ -30,9 +29,8 @@ async def get_blurb(search, sport):
     sorted_names = sorted(name_map, key=name_map.get, reverse=True)
     profile_url = sorted_names[0][0]
     player_name = sorted_names[0][1]
-    r = await asession.get(f'{base_url}{profile_url}')
-    html = r.html
-    await html.render()
+    html = session.get(f'{base_url}{profile_url}').html
+    html.render()
     player_block = html.find('div[id=block-mainpagecontent-2]')[0]
     title = player_block.find('div[class=player-news-article__title]')[0].find('h1')[0]
     summary = player_block.find('div[class=player-news-article__summary]')[0].find('p')[0]
