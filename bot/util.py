@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
 from urllib import request, parse
-from requests_html import HTMLSession
+from requests_html import AsyncHTMLSession
 import json
 
 base_url = 'https://www.rotoworld.com'
@@ -28,7 +28,7 @@ def get_blurb(search, sport):
     sorted_names = sorted(name_map, key=name_map.get, reverse=True)
     profile_url = sorted_names[0][0]
     player_name = sorted_names[0][1]
-    session = HTMLSession()
+    session = AsyncHTMLSession()
     html = session.get(f'{base_url}{profile_url}').html
     html.render()
     player_block = html.find('div[id=block-mainpagecontent-2]')[0]
@@ -38,6 +38,7 @@ def get_blurb(search, sport):
     if not title:
         raise NoResultsError(f"No recent player news for {search}")
     blurb = title.text + '\n\n' + summary.text + '\n' + timestamp.text
+    # print(player_name + '\n\n' + blurb)
     return blurb, player_name
 
 
