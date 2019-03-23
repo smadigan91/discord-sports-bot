@@ -11,7 +11,6 @@ asession = AsyncHTMLSession()
 # blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={last},{first}&sport={sport}'
 
 
-@asyncio.coroutine
 def get_blurb(search, sport):
     # for some weird reason its actually better to omit the first name in the search form
     req = request.Request(blurb_search_url.format(search=parse.quote(search), sport=sport))
@@ -31,7 +30,12 @@ def get_blurb(search, sport):
     sorted_names = sorted(name_map, key=name_map.get, reverse=True)
     profile_url = sorted_names[0][0]
     player_name = sorted_names[0][1]
-    html = get_blurb_html(f'{base_url}{profile_url}')
+    loop = asyncio.get_event_loop()
+    future = asyncio.Future()
+    asyncio.ensure_future(get_blurb_html(f'{base_url}{profile_url}', future))
+    loop.run_until_complete(future)
+    html = future.result().html
+    loop.close()
     html.render()
     player_block = html.find('div[id=block-mainpagecontent-2]')[0]
     title = player_block.find('div[class=player-news-article__title]')[0].find('h1')[0]
@@ -44,8 +48,9 @@ def get_blurb(search, sport):
     return blurb, player_name
 
 
-def get_blurb_html(url):
-    yield from asession.get(url)
+async def get_blurb_html(url, future):
+    r = await asession.get(url)
+    future.set_result(r)
 
 
 def get_soup(url):
