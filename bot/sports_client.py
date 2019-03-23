@@ -34,7 +34,7 @@ class SportsClient(discord.Client):
                 embed = start_or_sit(msg)
                 yield from self.send_message(message.channel, embed=embed)
             except Exception as ex:
-                yield from self.send_message(message.channel, content=str(ex))
+                raise ex
 
     def handle_basketball_request(self, message):
         sport = 'nba'
@@ -49,14 +49,14 @@ class SportsClient(discord.Client):
                 embedded_stats = get_basketball_log(search)
                 yield from self.send_message(message.channel, embed=embedded_stats)
             except Exception as ex:
-                yield from self.send_message(message.channel, content=str(ex))
+                raise ex
         elif content_lower.startswith('/live'):
             try:
                 search = message.content.split()[1:]
                 embedded_stats = get_live_log(search)
                 yield from self.send_message(message.channel, embed=embedded_stats)
             except Exception as ex:
-                yield from self.send_message(message.channel, content=str(ex))
+                raise ex
         elif content_lower.startswith('/last'):
             msg = message.content.split()[1:]
             try:
@@ -68,17 +68,17 @@ class SportsClient(discord.Client):
                 embedded_stats = get_last(" ".join(msg[1:]), last=games)
                 yield from self.send_message(message.channel, embed=embedded_stats)
             except Exception as ex:
-                yield from self.send_message(message.channel, content=str(ex))
+                raise ex
         elif content_lower.startswith('/highlight'):
             try:
                 yield from self.do_bball_highlight(channel=message.channel)
             except Exception as ex:
-                yield from self.send_message(message.channel, content=str(ex))
+                raise ex
         elif content_lower.startswith('/lowlight'):
             try:
                 yield from self.do_bball_lowlight(channel=message.channel)
             except Exception as ex:
-                yield from self.send_message(message.channel, content=str(ex))
+                raise ex
 
     def handle_baseball_request(self, message):
         sport = 'mlb'
@@ -89,7 +89,7 @@ class SportsClient(discord.Client):
                 help_map = discord.Embed(title="Commands List", description=get_help_text())
                 yield from self.send_message(message.channel, embed=help_map)
             except Exception as ex:
-                yield from self.send_message(message.channel, content=str(ex))
+                raise ex
 
         # /blurb [firstname]* [lastname]*
         if content_lower.startswith('/blurb'):
@@ -106,7 +106,7 @@ class SportsClient(discord.Client):
                 embedded_stats = get_baseball_log(" ".join(msg[1:]), last_days=days)
                 yield from self.send_message(message.channel, embed=embedded_stats)
             except Exception as ex:
-                yield from self.send_message(message.channel, content=str(ex))
+                raise ex
         # /log [player]*
         if content_lower.startswith('/log'):
             try:
@@ -114,7 +114,7 @@ class SportsClient(discord.Client):
                 embedded_stats = get_baseball_log(search)
                 yield from self.send_message(message.channel, embed=embedded_stats)
             except Exception as ex:
-                yield from self.send_message(message.channel, content=str(ex))
+                raise ex
         # /season [year] [player]*
         if content_lower.startswith('/season'):
             msg = message.content.split()[1:]
@@ -125,7 +125,7 @@ class SportsClient(discord.Client):
                     embedded_stats = get_baseball_log(" ".join(msg), season=True)
                 yield from self.send_message(message.channel, embed=embedded_stats)
             except Exception as ex:
-                yield from self.send_message(message.channel, content=str(ex))
+                raise ex
         # /highlight [player]* [index]
         if content_lower.startswith('/highlight'):
             msg = message.content.split()[1:]
@@ -144,7 +144,7 @@ class SportsClient(discord.Client):
                     highlight = get_highlight('%2B'.join(msg))
                     yield from self.send_message(message.channel, content=response % highlight)
             except Exception as ex:
-                yield from self.send_message(message.channel, content=str(ex))
+                raise ex
 
     def handle_blurb(self, message, sport):
         msg = message.content.split()[1:]
@@ -163,7 +163,7 @@ class SportsClient(discord.Client):
             embedded_blurb = discord.Embed(title=name, description=blurb)
             yield from self.send_message(message.channel, embed=embedded_blurb)
         except Exception as ex:
-            yield from self.send_message(message.channel, content=str(ex))
+                raise ex
 
     def get_channel_from_name(self, channel_name):
         return discord.utils.get(client.get_all_channels(), name=channel_name)
