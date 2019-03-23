@@ -14,11 +14,11 @@ class SportsClient(discord.Client):
 
     @asyncio.coroutine
     def on_message(self, message):
-        if message.channel.name in ["sportsbot-testing", "baseball"]:
+        if message.channel.name in ["baseball"]:
             yield from self.handle_baseball_request(message)
         elif message.channel.name in ["american-football"]:
             yield from self.handle_football_request(message)
-        elif message.channel.name in ["basketball", "better-late-than-never", "fuck-kevin-durant",
+        elif message.channel.name in ["sportsbot-testing", "basketball", "better-late-than-never", "fuck-kevin-durant",
                                       "people-order-our-patties"]:
             yield from self.handle_basketball_request(message)
 
