@@ -15,8 +15,8 @@ letters = re.compile('[^a-zA-Z]')
 DEBUG = False
 
 
-def get_basketball_blurb(search):
-    return get_blurb(search, 'nba')
+async def get_basketball_blurb(search):
+    return await get_blurb(search, 'nba')
 
 
 def get_log(search):
