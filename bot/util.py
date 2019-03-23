@@ -30,7 +30,8 @@ async def get_blurb(search, sport):
     sorted_names = sorted(name_map, key=name_map.get, reverse=True)
     profile_url = sorted_names[0][0]
     player_name = sorted_names[0][1]
-    html = get_blurb_html(f'{base_url}{profile_url}').html
+    r = await asession.get(f'{base_url}{profile_url}')
+    html = r.html
     html.render()
     player_block = html.find('div[id=block-mainpagecontent-2]')[0]
     title = player_block.find('div[class=player-news-article__title]')[0].find('h1')[0]
@@ -41,10 +42,6 @@ async def get_blurb(search, sport):
     blurb = title.text + '\n\n' + summary.text + '\n' + timestamp.text
     # print(player_name + '\n\n' + blurb)
     return blurb, player_name
-
-
-async def get_blurb_html(url):
-    return await asession.get(url)
 
 
 def get_soup(url):
