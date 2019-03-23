@@ -1,6 +1,7 @@
 import urllib
 import re
 import discord
+import asyncio
 from util import NoResultsError, get_blurb, get_soup
 from datetime import datetime
 from difflib import SequenceMatcher

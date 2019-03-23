@@ -2,10 +2,12 @@ from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
 from urllib import request, parse
 from requests_html import AsyncHTMLSession
+import asyncio
 import json
 
 base_url = 'https://www.rotoworld.com'
 blurb_search_url = "https://search.rotoworld.com/players?query={search}&league={sport}"
+asession = AsyncHTMLSession()
 # blurb_search_url = 'http://www.rotoworld.com/content/playersearch.aspx?searchname={last},{first}&sport={sport}'
 
 
@@ -28,8 +30,7 @@ def get_blurb(search, sport):
     sorted_names = sorted(name_map, key=name_map.get, reverse=True)
     profile_url = sorted_names[0][0]
     player_name = sorted_names[0][1]
-    session = AsyncHTMLSession()
-    html = session.get(f'{base_url}{profile_url}').html
+    html = asyncio.ensure_future(get_blurb_html(f'{base_url}{profile_url}'))
     html.render()
     player_block = html.find('div[id=block-mainpagecontent-2]')[0]
     title = player_block.find('div[class=player-news-article__title]')[0].find('h1')[0]
@@ -40,6 +41,11 @@ def get_blurb(search, sport):
     blurb = title.text + '\n\n' + summary.text + '\n' + timestamp.text
     # print(player_name + '\n\n' + blurb)
     return blurb, player_name
+
+
+async def get_blurb_html(url):
+    r = await asession.get(url)
+    return r
 
 
 def get_soup(url):
@@ -54,5 +60,3 @@ class NoResultsError(Exception):
     def __init__(self, message):
         super().__init__(message)
         self.message = message
-
-
