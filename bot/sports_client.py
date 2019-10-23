@@ -208,5 +208,5 @@ if __name__ == "__main__":
     # token = json.loads(open('token.json', 'r').read())["APP_TOKEN"]
     client = SportsClient()
     token = os.environ.get('TOKEN', '')
-    # client.loop.create_task(client.highlight_lowlight_loop())
+    client.loop.create_task(client.highlight_lowlight_loop())
     client.run(token)
