@@ -180,7 +180,11 @@ def get_player_log_table(search):
     log_holder = player_soup.find('span', text="Game Logs")
     name_node = player_soup.find('h1', attrs={'itemprop': 'name'})
     name = name_node.text
-    href = log_holder.find_next('div').find('ul').findChildren('a').pop().get('href')
+    game_log_link_list = log_holder.find_next('div').find('ul').findChildren('a')
+    game_log_link = game_log_link_list.pop()
+    if 'Playoffs' in game_log_link.text:
+        game_log_link = game_log_link_list.pop()
+    href = game_log_link.get('href')
     log_soup = get_soup(bbref_url + href)
     table = log_soup.find('table', attrs={'id': 'pgl_basic'}).find('tbody')
     return name, table
