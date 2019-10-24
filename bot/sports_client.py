@@ -16,12 +16,13 @@ class SportsClient(discord.Client):
     def on_message(self, message):
         channel = message.channel
         command, message_content = extract_message(message)
-        if message.channel.name in ["sportsbot-testing", "baseball"]:
+        print(command)
+        if channel.name in ["baseball"]:
             yield from self.handle_baseball_request(command, message_content, channel)
-        elif message.channel.name in ["american-football"]:
+        elif channel.name in ["american-football"]:
             yield from self.handle_football_request(command, message_content, channel)
-        elif message.channel.name in ["basketball", "better-late-than-never", "fuck-kevin-durant",
-                                      "in-memory-of-sankalp"]:
+        elif channel.name in ["sportsbot-testing", "basketball", "better-late-than-never", "fuck-kevin-durant",
+                              "in-memory-of-sankalp"]:
             yield from self.handle_basketball_request(command, message_content, channel)
 
     def handle_football_request(self, command, message_content, channel):
@@ -198,8 +199,8 @@ class SportsClient(discord.Client):
 
 # given a message return "/command", "Rest of message"
 def extract_message(message):
-    lower_content = message.content.lower()
-    return lower_content[0], lower_content.split()[1:]
+    lower_content = message.content.lower().split()
+    return lower_content[0], lower_content[1:]
 
 
 if __name__ == "__main__":
