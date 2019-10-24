@@ -19,17 +19,16 @@ class SportsClient(discord.Client):
         elif message.channel.name in ["american-football"]:
             yield from self.handle_football_request(message)
         elif message.channel.name in ["basketball", "better-late-than-never", "fuck-kevin-durant",
-                                      "people-order-our-patties"]:
+                                      "in-memory-of-sankalp"]:
             yield from self.handle_basketball_request(message)
 
     def handle_football_request(self, message):
         sport = 'nfl'
-        content_lower = message.content.lower()
+        cmd, msg = extract_message(message)
         # /blurb [firstname]* [lastname]*
-        if content_lower.startswith('/blurb'):
+        if cmd.startswith('/blurb'):
             yield from self.handle_blurb(message, sport)
-        elif content_lower.startswith('/start'):
-            msg = content_lower.split()[1:]
+        elif cmd.startswith('/start'):
             try:
                 embed = start_or_sit(msg)
                 yield from self.send_message(message.channel, embed=embed)
@@ -38,43 +37,41 @@ class SportsClient(discord.Client):
 
     def handle_basketball_request(self, message):
         sport = 'nba'
-        content_lower = message.content.lower()
+        cmd, msg = extract_message(message)
+        msg_str = " ".join(msg)
         # /blurb [firstname]* [lastname]*
-        if content_lower.startswith('/blurb'):
+        if cmd.startswith('/blurb'):
             yield from self.handle_blurb(message, sport)
         # /log [player]*
-        elif content_lower.startswith('/log'):
+        elif cmd.startswith('/log'):
             try:
-                search = " ".join(message.content.split()[1:])
-                embedded_stats = get_basketball_log(search)
+                embedded_stats = get_basketball_log(msg_str)
                 yield from self.send_message(message.channel, embed=embedded_stats)
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
-        elif content_lower.startswith('/live'):
+        elif cmd.startswith('/live'):
             try:
-                search = message.content.split()[1:]
-                embedded_stats = get_live_log(search)
+                embedded_stats = get_live_log(msg)
                 yield from self.send_message(message.channel, embed=embedded_stats)
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
-        elif content_lower.startswith('/last'):
-            msg = message.content.split()[1:]
+        elif cmd.startswith('/last'):
             try:
                 games = int(msg[0])
                 if not games:
                     raise ValueError('A number of last games must be provided')
                 if len(msg) < 2:
                     raise ValueError('Must provide both a number of games and a name')
-                embedded_stats = get_last(" ".join(msg[1:]), last=games)
+                embedded_stats = get_last(msg_str, last=games)
                 yield from self.send_message(message.channel, embed=embedded_stats)
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
-        elif content_lower.startswith('/highlight'):
+        elif cmd.startswith('/highlight'):
             try:
                 yield from self.do_bball_highlight(channel=message.channel)
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
-        elif content_lower.startswith('/lowlight'):
+        elif cmd.startswith('/lowlight'):
             try:
                 yield from self.do_bball_lowlight(channel=message.channel)
             except Exception as ex:
@@ -83,20 +80,19 @@ class SportsClient(discord.Client):
     def handle_baseball_request(self, message):
         sport = 'mlb'
         # /help
-        content_lower = message.content.lower()
-        if content_lower.startswith('/help'):
+        cmd, msg = extract_message(message)
+        msg_str = " ".join(msg)
+        if cmd.startswith('/help'):
             try:
                 help_map = discord.Embed(title="Commands List", description=get_help_text())
                 yield from self.send_message(message.channel, embed=help_map)
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
-
         # /blurb [firstname]* [lastname]*
-        if content_lower.startswith('/blurb'):
+        if cmd.startswith('/blurb'):
             yield from self.handle_blurb(message, sport)
         # /last [num days]* [player]*
-        if content_lower.startswith('/last'):
-            msg = message.content.split()[1:]
+        if cmd.startswith('/last'):
             try:
                 days = int(msg[0])
                 if not days:
@@ -108,16 +104,14 @@ class SportsClient(discord.Client):
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
         # /log [player]*
-        if content_lower.startswith('/log'):
+        if cmd.startswith('/log'):
             try:
-                search = " ".join(message.content.split()[1:])
-                embedded_stats = get_baseball_log(search)
+                embedded_stats = get_baseball_log(msg_str)
                 yield from self.send_message(message.channel, embed=embedded_stats)
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
         # /season [year] [player]*
-        if content_lower.startswith('/season'):
-            msg = message.content.split()[1:]
+        if cmd.startswith('/season'):
             try:
                 if msg[0].isdigit():
                     embedded_stats = get_baseball_log(" ".join(msg[1:]), season=True, season_year=msg[0])
@@ -127,8 +121,7 @@ class SportsClient(discord.Client):
             except Exception as ex:
                 yield from self.send_message(message.channel, content=str(ex))
         # /highlight [player]* [index]
-        if content_lower.startswith('/highlight'):
-            msg = message.content.split()[1:]
+        if cmd.startswith('/highlight'):
             response = "\n%s\n%s"
             try:
                 if msg[0] == 'index':
@@ -147,7 +140,7 @@ class SportsClient(discord.Client):
                 yield from self.send_message(message.channel, content=str(ex))
 
     def handle_blurb(self, message, sport):
-        msg = message.content.split()[1:]
+        _, msg = extract_message(message)
         try:
             first = msg[0]
             last = " ".join(msg[1:])  # hopefully handles the Jrs
@@ -202,6 +195,12 @@ class SportsClient(discord.Client):
             yield from self.send_message(channel, embed=embed)
         else:
             yield from self.send_message(channel, content="No lowlight of the day yesterday")
+
+
+# given a message return "/command", "Rest of message"
+def extract_message(message):
+    lower_content = message.content.lower()
+    return lower_content[0], lower_content.split()[1:]
 
 
 if __name__ == "__main__":
