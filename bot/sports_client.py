@@ -14,17 +14,18 @@ class SportsClient(discord.Client):
 
     @asyncio.coroutine
     def on_message(self, message):
-        channel = message.channel
-        if channel.name in ["baseball"]:
-            command, message_content = extract_message(message)
-            yield from self.handle_baseball_request(command, message_content, channel)
-        elif channel.name in ["american-football"]:
-            command, message_content = extract_message(message)
-            yield from self.handle_football_request(command, message_content, channel)
-        elif channel.name in ["sportsbot-testing", "basketball", "better-late-than-never", "fuck-kevin-durant",
-                              "in-memory-of-sankalp"]:
-            command, message_content = extract_message(message)
-            yield from self.handle_basketball_request(command, message_content, channel)
+        if message.content:
+            channel = message.channel
+            if channel.name in ["baseball"]:
+                command, message_content = extract_message(message)
+                yield from self.handle_baseball_request(command, message_content, channel)
+            elif channel.name in ["american-football"]:
+                command, message_content = extract_message(message)
+                yield from self.handle_football_request(command, message_content, channel)
+            elif channel.name in ["sportsbot-testing", "basketball", "better-late-than-never", "fuck-kevin-durant",
+                                  "in-memory-of-sankalp"]:
+                command, message_content = extract_message(message)
+                yield from self.handle_basketball_request(command, message_content, channel)
 
     def handle_football_request(self, command, message_content, channel):
         sport = 'nfl'
