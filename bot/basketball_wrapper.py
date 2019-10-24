@@ -33,8 +33,8 @@ def get_last(search, last):
 
 def get_live_log(search):
     live_log_map = get_live_log_map(search)
-    title = "Live(ish) stats for **{player}** vs **{opp}** @ **{date}**"
-    embed = format_log(live_log_map, title=title, name_only=False, add_date_header=False)
+    title = "Live(ish) stats for **{player}**"
+    embed = format_live_log(live_log_map, title=title)
     return embed
 
 
@@ -79,37 +79,27 @@ def get_live_log_map(search, url=None):
     else:
         last_name = format_live_search(search)
         soup = get_soup(espn_search_url.format(search=last_name))
-    profile = soup.findChild('td', class_='profile-overview')
-    if profile:
+    name_tag = soup.find('meta', attrs={'property': 'og:title'})
+    if name_tag:
         try:
-            name = soup.find('meta', attrs={'property': 'og:title'}).get('content')
-            qtr = soup.find('li', class_='game-clock')
-            if qtr:
+            name = name_tag.get('content').replace(' Stats, News, Bio | ESPN', '')
+            is_playing = soup.find('h3', class_='Card__Header__Title Card__Header__Title--no-theme', text='Current Game')
+            if is_playing:
                 log_map = {}
-                time_left = qtr.find_next('span').text
-                log_header = profile.find_next(lambda tag: tag.name == 'h4' and tag.text == 'GAME LOG')
-                stats = log_header.find_next('table', class_='tablehead').findChildren('td')
-                end_qtr = 'Halftime' in qtr.text or 'End' in qtr.text
-                log_map['date_game'] = qtr.text.rstrip() if end_qtr else '{}, {}'.format(qtr.text.replace('"', '').replace(time_left, ''), time_left)
-                log_map['opp_id'] = stats[1].find_next('a').find_next('a').text
-                log_map['mp'] = stats[3].text
-                fgm_fga = stats[4].text.split('-')
-                log_map['fg'] = fgm_fga[0]
-                log_map['fga'] = fgm_fga[1]
-                log_map['fg_pct'] = stats[5].text
-                tpm_tpa = stats[6].text.split('-')
-                log_map['fg3'] = tpm_tpa[0]
-                log_map['fg3a'] = tpm_tpa[1]
-                ftm_fta = stats[8].text.split('-')
-                log_map['ft'] = ftm_fta[0]
-                log_map['fta'] = ftm_fta[1]
-                log_map['trb'] = stats[10].text
-                log_map['ast'] = stats[11].text
-                log_map['blk'] = stats[12].text
-                log_map['stl'] = stats[13].text
-                log_map['pf'] = stats[14].text
-                log_map['tov'] = stats[15].text
-                log_map['pts'] = stats[16].text
+                game_summary = soup.findChild('a', attrs={'title': 'Game Summary'})
+                stats_table = game_summary.find_next('tbody', class_='Table__TBODY')
+                stats = [row.text for row in stats_table.findChildren(lambda tag: tag.name == 'td')]
+                log_map['mp'] = stats[2]
+                log_map['fg_pct'] = stats[3]
+                log_map['tp_pct'] = stats[4]
+                log_map['ft_pct'] = stats[5]
+                log_map['trb'] = int(float(stats[6]))
+                log_map['ast'] = int(float(stats[7]))
+                log_map['blk'] = int(float(stats[8]))
+                log_map['stl'] = int(float(stats[9]))
+                log_map['pf'] = int(float(stats[10]))
+                log_map['tov'] = int(float(stats[11]))
+                log_map['pts'] = int(float(stats[12]))
                 log_map['name'] = name
                 return log_map
             else:
@@ -228,6 +218,28 @@ def get_player_page(search=None, url=None):
             raise NoResultsError("No NBA results for %s" % search)
     else:
         raise NoResultsError("No results for %s" % search)
+
+
+def format_live_log(log_map, title="**{player}**'s most recent game"):
+    mins = log_map['mp']
+    pts = log_map['pts']
+    fgp = log_map['fg_pct']
+    tpp = log_map['tp_pct']
+    ftp = log_map['ft_pct']
+    reb = log_map['trb']
+    ast = log_map['ast']
+    stl = log_map['stl']
+    blk = log_map['blk']
+    pf = log_map['pf']
+    to = log_map['tov']
+    name = log_map['name']
+    title = title.format(player=name)
+    log_string = f"**MIN**: {mins}\n**PTS**: {pts} ({fgp} **FG%**, {tpp} **3P%**, {ftp} **FT%**)" \
+                 f"\n**REB**: {reb}\n**AST**: {ast}\n**STL**: {stl}\n**BLK**: {blk}\n**TO**: {to}\n**PF**: {pf}"
+    if DEBUG:
+        print(title)
+        print(log_string)
+    return discord.Embed(title=title, description=log_string)
 
 
 def format_log(log_map, title="**{player}**'s most recent game", name_only=True, add_date_header=True):
