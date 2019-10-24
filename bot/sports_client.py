@@ -99,7 +99,7 @@ class SportsClient(discord.Client):
                     raise ValueError('A number of last days must be provided')
                 if len(message_content) < 2:
                     raise ValueError('Must provide both a number of days and a name')
-                embedded_stats = get_baseball_log(" ".join(message_content[1:], last_days=days)
+                embedded_stats = get_baseball_log(" ".join(message_content[1:]), last_days=days)
                 yield from self.send_message(channel, embed=embedded_stats)
             except Exception as ex:
                 yield from self.send_message(channel, content=str(ex))
