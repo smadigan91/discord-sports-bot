@@ -32,8 +32,11 @@ def get_last(search, last):
 
 
 def get_live_log(search):
-    live_log_map = get_live_log_map(search)
-    title = "Live(ish) stats for **{player}**"
+    just_played, live_log_map = get_live_log_map(search)
+    if just_played:
+        title = "Today's stats for **{player}**"
+    else:
+        title = "Live(ish) stats for **{player}**"
     embed = format_live_log(live_log_map, title=title)
     return embed
 
@@ -84,7 +87,9 @@ def get_live_log_map(search, url=None):
         try:
             name = name_tag.get('content').replace(' Stats, News, Bio | ESPN', '')
             is_playing = soup.find('h3', class_='Card__Header__Title Card__Header__Title--no-theme', text='Current Game')
-            if is_playing:
+            just_played = soup.find('h3', class_='Card__Header__Title Card__Header__Title--no-theme', text='Previous Game')
+            has_stats = soup.find('div', class_='StatBlockInner ph2 flex-expand')
+            if (is_playing or just_played) and has_stats:
                 log_map = {}
                 game_summary = soup.findChild('a', attrs={'title': 'Game Summary'})
                 stats_table = game_summary.find_next('tbody', class_='Table__TBODY')
@@ -101,9 +106,9 @@ def get_live_log_map(search, url=None):
                 log_map['tov'] = int(float(stats[11]))
                 log_map['pts'] = int(float(stats[12]))
                 log_map['name'] = name
-                return log_map
+                return just_played is not None, log_map
             else:
-                raise NoResultsError(f"{name} isn't currently playing")
+                raise NoResultsError(f"Either {name} isn't currently playing or ESPN's site is lying to me")
         except Exception as ex:
             raise ex
     else:
