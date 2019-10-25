@@ -14,16 +14,18 @@ class SportsClient(discord.Client):
 
     @asyncio.coroutine
     def on_message(self, message):
-        channel = message.channel
-        command, message_content = extract_message(message)
-        print(command)
-        if channel.name in ["baseball"]:
-            yield from self.handle_baseball_request(command, message_content, channel)
-        elif channel.name in ["american-football"]:
-            yield from self.handle_football_request(command, message_content, channel)
-        elif channel.name in ["sportsbot-testing", "basketball", "better-late-than-never", "fuck-kevin-durant",
-                              "in-memory-of-sankalp"]:
-            yield from self.handle_basketball_request(command, message_content, channel)
+        if message.content:
+            channel = message.channel
+            if channel.name in ["baseball"]:
+                command, message_content = extract_message(message)
+                yield from self.handle_baseball_request(command, message_content, channel)
+            elif channel.name in ["american-football"]:
+                command, message_content = extract_message(message)
+                yield from self.handle_football_request(command, message_content, channel)
+            elif channel.name in ["sportsbot-testing", "basketball", "better-late-than-never", "fuck-kevin-durant",
+                                  "in-memory-of-sankalp"]:
+                command, message_content = extract_message(message)
+                yield from self.handle_basketball_request(command, message_content, channel)
 
     def handle_football_request(self, command, message_content, channel):
         sport = 'nfl'
@@ -63,7 +65,7 @@ class SportsClient(discord.Client):
                     raise ValueError('A number of last games must be provided')
                 if len(message_content) < 2:
                     raise ValueError('Must provide both a number of games and a name')
-                embedded_stats = get_last(msg_str, last=games)
+                embedded_stats = get_last(' '.join(message_content[1:]), last=games)
                 yield from self.send_message(channel, embed=embedded_stats)
             except Exception as ex:
                 yield from self.send_message(channel, content=str(ex))
@@ -99,7 +101,7 @@ class SportsClient(discord.Client):
                     raise ValueError('A number of last days must be provided')
                 if len(message_content) < 2:
                     raise ValueError('Must provide both a number of days and a name')
-                embedded_stats = get_baseball_log(msg_str, last_days=days)
+                embedded_stats = get_baseball_log(" ".join(message_content[1:]), last_days=days)
                 yield from self.send_message(channel, embed=embedded_stats)
             except Exception as ex:
                 yield from self.send_message(channel, content=str(ex))
