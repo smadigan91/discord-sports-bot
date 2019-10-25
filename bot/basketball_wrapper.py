@@ -88,7 +88,7 @@ def get_live_log_map(search, url=None):
             name = name_tag.get('content').replace(' Stats, News, Bio | ESPN', '')
             is_playing = soup.find('h3', class_='Card__Header__Title Card__Header__Title--no-theme', text='Current Game')
             just_played = soup.find('h3', class_='Card__Header__Title Card__Header__Title--no-theme', text='Previous Game')
-            has_stats = soup.find('div', class_='StatBlockInner ph2 flex-expand')
+            has_stats = soup.findChildren('div', class_='StatBlockInner ph2 flex-expand')
             if (is_playing or just_played) and has_stats:
                 log_map = {}
                 game_summary = soup.findChild('a', attrs={'title': 'Game Summary'})
@@ -105,6 +105,7 @@ def get_live_log_map(search, url=None):
                 log_map['pf'] = int(float(stats[10]))
                 log_map['tov'] = int(float(stats[11]))
                 log_map['pts'] = int(float(stats[12]))
+                log_map['pm'] = has_stats[-1].text
                 log_map['name'] = name
                 return just_played is not None, log_map
             else:
@@ -237,10 +238,12 @@ def format_live_log(log_map, title="**{player}**'s most recent game"):
     blk = log_map['blk']
     pf = log_map['pf']
     to = log_map['tov']
+    pm = log_map['pm']
     name = log_map['name']
     title = title.format(player=name)
     log_string = f"**MIN**: {mins}\n**PTS**: {pts} ({fgp} **FG%**, {tpp} **3P%**, {ftp} **FT%**)" \
-                 f"\n**REB**: {reb}\n**AST**: {ast}\n**STL**: {stl}\n**BLK**: {blk}\n**TO**: {to}\n**PF**: {pf}"
+                 f"\n**REB**: {reb}\n**AST**: {ast}\n**STL**: {stl}\n**BLK**: {blk}\n**TO**: {to}\n**PF**: {pf}" \
+                 f"\n**+/-**: {pm}"
     if DEBUG:
         print(title)
         print(log_string)
