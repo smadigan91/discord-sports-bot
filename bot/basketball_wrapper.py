@@ -20,14 +20,14 @@ def get_basketball_blurb(first, last):
 
 def get_season(search, year):
     season_map, name, year = get_season_map(search, year)
-    title = "%s in %s" % (name, year)
+    title = "**{player}** in %s" % year
     embed = format_log(season_map, title=title, add_date_header=False, season=True)
     return embed
 
 
 def get_career(search):
     season_map, name = get_career_map(search)
-    title = "Career stats for %s" % name
+    title = "Career stats for **{player}**"
     embed = format_log(season_map, title=title, add_date_header=False, season=True)
     return embed
 
@@ -102,6 +102,7 @@ def get_career_map(search):
     stat_map = index_row(stat_row)
     stat_map['name'] = name
     return stat_map, name
+
 
 def get_log_map(search):
     name, table = get_player_log_table(search=search)
@@ -283,7 +284,7 @@ def format_live_log(log_map, title="**{player}**'s most recent game"):
     pf = log_map['pf']
     to = log_map['tov']
     pm = log_map['pm']
-    name = log_map['name']
+    name = log_map['name'].encode('latin1').decode('utf-8')
     title = title.format(player=name)
     log_string = f"**MIN**: {mins}\n**PTS**: {pts} ({fgp} **FG%**, {tpp} **3P%**, {ftp} **FT%**)" \
                  f"\n**REB**: {reb}\n**AST**: {ast}\n**STL**: {stl}\n**BLK**: {blk}\n**TO**: {to}\n**PF**: {pf}" \
@@ -319,7 +320,7 @@ def format_log(log_map, title="**{player}**'s most recent game", name_only=True,
     blk = log_map.get(fmt_season('blk'), "")
     pf = log_map.get(fmt_season('pf'), "")
     to = log_map.get(fmt_season('tov'), "")
-    name = log_map['name']
+    name = log_map['name'].encode('latin1').decode('utf-8')
     if name_only:
         title = title.format(player=name)
     else:
