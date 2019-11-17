@@ -218,8 +218,8 @@ class SportsClient(discord.Client):
 
 # given a message return "/command", "Rest of message"
 def extract_message(message):
-    lower_content = message.content.lower().split()
-    return lower_content[0], lower_content[1:]
+    lower_content = message.content.split()
+    return lower_content[0].lower(), lower_content[1:]
 
 
 if __name__ == "__main__":
