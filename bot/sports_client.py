@@ -6,7 +6,7 @@ import datetime
 from baseball_wrapper import get_highlight, get_baseball_blurb, get_log as get_baseball_log
 from football_wrapper import get_football_blurb, start_or_sit
 from basketball_wrapper import get_basketball_blurb, get_log as get_basketball_log, get_lowlight, \
-    get_highlight as get_bball_highlight, get_live_log, get_last
+    get_highlight as get_bball_highlight, get_live_log, get_last, get_season, get_career
 from help_commands import get_help_text
 
 
@@ -52,6 +52,23 @@ class SportsClient(discord.Client):
                 yield from self.send_message(channel, embed=embedded_stats)
             except Exception as ex:
                 yield from self.send_message(channel, content=str(ex))
+        # /season [year] [player]*
+        elif command.startswith('/season'):
+            try:
+                if message_content[0].isdigit():
+                    embedded_stats = get_season(" ".join(message_content[1:]), year=message_content[0])
+                else:
+                    embedded_stats = get_season(" ".join(message_content), year=None)
+                yield from self.send_message(channel, embed=embedded_stats)
+            except Exception as ex:
+                yield from self.send_message(channel, content=str(ex))
+        # /career [player]*
+        elif command.startswith('/career'):
+            try:
+                embedded_stats = get_career(" ".join(message_content))
+                yield from self.send_message(channel, embed=embedded_stats)
+            except Exception as ex:
+                yield from self.send_message(channel, content=str(ex))
         elif command.startswith('/live'):
             try:
                 embedded_stats = get_live_log(message_content)
@@ -91,10 +108,10 @@ class SportsClient(discord.Client):
             except Exception as ex:
                 yield from self.send_message(channel, content=str(ex))
         # /blurb [firstname]* [lastname]*
-        if command.startswith('/blurb'):
+        elif command.startswith('/blurb'):
             yield from self.handle_blurb(message_content, channel, sport)
         # /last [num days]* [player]*
-        if command.startswith('/last'):
+        elif command.startswith('/last'):
             try:
                 days = int(message_content[0])
                 if not days:
@@ -106,14 +123,14 @@ class SportsClient(discord.Client):
             except Exception as ex:
                 yield from self.send_message(channel, content=str(ex))
         # /log [player]*
-        if command.startswith('/log'):
+        elif command.startswith('/log'):
             try:
                 embedded_stats = get_baseball_log(msg_str)
                 yield from self.send_message(channel, embed=embedded_stats)
             except Exception as ex:
                 yield from self.send_message(channel, content=str(ex))
         # /season [year] [player]*
-        if command.startswith('/season'):
+        elif command.startswith('/season'):
             try:
                 if message_content[0].isdigit():
                     embedded_stats = get_baseball_log(" ".join(message_content[1:]), season=True,
@@ -124,7 +141,7 @@ class SportsClient(discord.Client):
             except Exception as ex:
                 yield from self.send_message(channel, content=str(ex))
         # /highlight [player]* [index]
-        if command.startswith('/highlight'):
+        elif command.startswith('/highlight'):
             response = "\n%s\n%s"
             try:
                 if message_content[0] == 'index':

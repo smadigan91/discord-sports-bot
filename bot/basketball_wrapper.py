@@ -18,6 +18,20 @@ def get_basketball_blurb(first, last):
     return get_blurb(first, last, 'nba')
 
 
+def get_season(search, year):
+    season_map, name, year = get_season_map(search, year)
+    title = "%s in %s" % (name, year)
+    embed = format_log(season_map, title=title, add_date_header=False, season=True)
+    return embed
+
+
+def get_career(search):
+    season_map, name = get_career_map(search)
+    title = "Career stats for %s" % name
+    embed = format_log(season_map, title=title, add_date_header=False, season=True)
+    return embed
+
+
 def get_log(search):
     log_map = get_log_map(search)
     embed = format_log(log_map)
@@ -58,6 +72,36 @@ def get_lowlight():
         embed = format_log(lowlight_map, title=title, name_only=False, add_date_header=False)
     return embed
 
+
+def get_season_map(search, year):
+    player_soup = get_player_page(search)
+    name_node = player_soup.find('h1', attrs={'itemprop': 'name'})
+    name = name_node.text
+    stat_rows = player_soup.find('table', attrs={'id': 'per_game'}).find('tbody').findChildren(
+        lambda tag: tag.name == 'tr' and ((tag.get('id') is not None and tag.get('id').split('.')[1] == str(year))
+                                          if year else True))
+    if not stat_rows:
+        raise NoResultsError("No results for %s in %s" % (search, year))
+    stat_row = stat_rows.pop()
+    if year is None:
+        year = stat_row.get('id').split('.')[1]
+    stat_map = index_row(stat_row)
+    stat_map['name'] = name
+    return stat_map, name, year
+
+
+def get_career_map(search):
+    player_soup = get_player_page(search)
+    name_node = player_soup.find('h1', attrs={'itemprop': 'name'})
+    name = name_node.text
+    stat_rows = player_soup.find('table', attrs={'id': 'per_game'}).find('tfoot').findChildren(
+        lambda tag: tag.name == 'tr')
+    if not stat_rows:
+        raise NoResultsError("No results for %s in %s" % search)
+    stat_row = stat_rows[0]
+    stat_map = index_row(stat_row)
+    stat_map['name'] = name
+    return stat_map, name
 
 def get_log_map(search):
     name, table = get_player_log_table(search=search)
@@ -250,24 +294,31 @@ def format_live_log(log_map, title="**{player}**'s most recent game"):
     return discord.Embed(title=title, description=log_string)
 
 
-def format_log(log_map, title="**{player}**'s most recent game", name_only=True, add_date_header=True):
+def format_log(log_map, title="**{player}**'s most recent game", name_only=True, add_date_header=True, season=False):
+    def fmt_season(key):
+        if season:
+            return f"{key}_per_g"
+        else:
+            return key
     date = log_map.get('date_game', None)
     opp = log_map.get('opp_id', None)
-    mins = log_map['mp']
-    pts = log_map['pts']
-    fgm = log_map['fg']
-    fga = log_map['fga']
-    fgp = log_map['fg_pct']
-    tpm = log_map['fg3']
-    tpa = log_map['fg3a']
-    ftm = log_map['ft']
-    fta = log_map['fta']
-    reb = log_map['trb']
-    ast = log_map['ast']
-    stl = log_map['stl']
-    blk = log_map['blk']
-    pf = log_map['pf']
-    to = log_map['tov']
+    mins = log_map[fmt_season('mp')]
+    pts = log_map[fmt_season('pts')]
+    fgm = log_map[fmt_season('fg')]
+    fga = log_map[fmt_season('fga')]
+    fgp = "0" if float(fga) == 0 else log_map['fg_pct']
+    tpm = log_map[fmt_season('fg3')]
+    tpa = log_map[fmt_season('fg3a')]
+    tpp = "0" if float(tpa) == 0 else  log_map['fg3_pct']
+    ftm = log_map[fmt_season('ft')]
+    fta = log_map[fmt_season('fta')]
+    ftp = "0" if float(fta) == 0 else log_map['ft_pct']
+    reb = log_map[fmt_season('trb')]
+    ast = log_map[fmt_season('ast')]
+    stl = log_map[fmt_season('stl')]
+    blk = log_map[fmt_season('blk')]
+    pf = log_map[fmt_season('pf')]
+    to = log_map[fmt_season('tov')]
     name = log_map['name']
     if name_only:
         title = title.format(player=name)
@@ -275,7 +326,7 @@ def format_log(log_map, title="**{player}**'s most recent game", name_only=True,
         title = title.format(player=name, date=date, opp=opp)
     date_header = f"**{date}** vs **{opp}**\n"
     log_string = (date_header if add_date_header else "") + \
-                 f"**MIN**: {mins}\n**PTS**: {pts} ({fgm}/{fga}, {fgp} **FG%**, {tpm}/{tpa} **3P**, {ftm}/{fta} **FT**)" \
+                 f"**MIN**: {mins}\n**PTS**: {pts} ({fgm}/{fga}  **{fgp} FG%**, {tpm}/{tpa}  **{tpp} 3P%**, {ftm}/{fta}  **{ftp} FT%**)" \
                  f"\n**REB**: {reb}\n**AST**: {ast}\n**STL**: {stl}\n**BLK**: {blk}\n**TO**: {to}\n**PF**: {pf}"
     if DEBUG:
         print(title)
