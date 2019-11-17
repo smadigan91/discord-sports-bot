@@ -302,23 +302,23 @@ def format_log(log_map, title="**{player}**'s most recent game", name_only=True,
             return key
     date = log_map.get('date_game', None)
     opp = log_map.get('opp_id', None)
-    mins = log_map[fmt_season('mp')]
-    pts = log_map[fmt_season('pts')]
-    fgm = log_map[fmt_season('fg')]
-    fga = log_map[fmt_season('fga')]
-    fgp = "0" if float(fga) == 0 else log_map['fg_pct']
-    tpm = log_map[fmt_season('fg3')]
-    tpa = log_map[fmt_season('fg3a')]
-    tpp = "0" if float(tpa) == 0 else  log_map['fg3_pct']
-    ftm = log_map[fmt_season('ft')]
-    fta = log_map[fmt_season('fta')]
-    ftp = "0" if float(fta) == 0 else log_map['ft_pct']
-    reb = log_map[fmt_season('trb')]
-    ast = log_map[fmt_season('ast')]
-    stl = log_map[fmt_season('stl')]
-    blk = log_map[fmt_season('blk')]
-    pf = log_map[fmt_season('pf')]
-    to = log_map[fmt_season('tov')]
+    mins = log_map.get(fmt_season('mp'), "")
+    pts = log_map.get(fmt_season('pts'), "")
+    fgm = log_map.get(fmt_season('fg'), "0")
+    fga = log_map.get(fmt_season('fga'), "0")
+    fgp = "0" if float(fga) == 0 else log_map.get('fg_pct', "0")
+    tpm = log_map.get(fmt_season('fg3'), "0")
+    tpa = log_map.get(fmt_season('fg3a'), "0")
+    tpp = "0" if float(tpa) == 0 else log_map.get('fg3_pct', "0")
+    ftm = log_map.get(fmt_season('ft'), "0")
+    fta = log_map.get(fmt_season('fta'), "0")
+    ftp = "0" if float(fta) == 0 else log_map.get('ft_pct', "0")
+    reb = log_map.get(fmt_season('trb'), "")
+    ast = log_map.get(fmt_season('ast'), "")
+    stl = log_map.get(fmt_season('stl'), "")
+    blk = log_map.get(fmt_season('blk'), "")
+    pf = log_map.get(fmt_season('pf'), "")
+    to = log_map.get(fmt_season('tov'), "")
     name = log_map['name']
     if name_only:
         title = title.format(player=name)
