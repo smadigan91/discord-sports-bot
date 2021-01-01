@@ -11,7 +11,7 @@ last_url = bbref_url + '/play-index/span_stats.cgi?html=1&page_id={page_id}&tabl
 espn_search_url = 'http://www.espn.com/nba/players/_/search/{search}'
 top_url = bbref_url + '/friv/dailyleaders.fcgi'
 letters = re.compile('[^a-zA-Z]')
-DEBUG = True
+DEBUG = False
 
 
 def get_basketball_blurb(first, last):
