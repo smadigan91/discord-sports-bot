@@ -11,7 +11,7 @@ last_url = bbref_url + '/play-index/span_stats.cgi?html=1&page_id={page_id}&tabl
 espn_search_url = 'http://www.espn.com/nba/players/_/search/{search}'
 top_url = bbref_url + '/friv/dailyleaders.fcgi'
 letters = re.compile('[^a-zA-Z]')
-DEBUG = False
+DEBUG = True
 
 
 def get_basketball_blurb(first, last):
@@ -86,7 +86,7 @@ def get_season_map(search, year):
     if year is None:
         year = stat_row.get('id').split('.')[1]
     stat_map = index_row(stat_row)
-    stat_map['name'] = name
+    stat_map['name'] = name.strip()
     return stat_map, name, year
 
 
@@ -100,7 +100,7 @@ def get_career_map(search):
         raise NoResultsError("No results for %s in %s" % search)
     stat_row = stat_rows[0]
     stat_map = index_row(stat_row)
-    stat_map['name'] = name
+    stat_map['name'] = name.strip()
     return stat_map, name
 
 
@@ -108,7 +108,7 @@ def get_log_map(search):
     name, table = get_player_log_table(search=search)
     row = table.find_all(lambda tag: tag.name == 'tr' and 'pgl_basic' in tag.get('id', '')).pop()
     stat_map = index_row(row)
-    stat_map['name'] = name
+    stat_map['name'] = name.strip()
     return stat_map
 
 
@@ -116,7 +116,7 @@ def get_avg_map(search, last):
     name, table = get_avg_log_table(search=search, last=last)
     row = table.findChild('tr')
     stat_map = index_row(row)
-    stat_map['name'] = name
+    stat_map['name'] = name.strip()
     return stat_map
 
 
@@ -190,7 +190,7 @@ def index_row(row):
         stat = cell.get('data-stat', default=None)
         if stat:
             if stat == 'player':
-                stat_map['name'] = cell.text
+                stat_map['name'] = cell.text.strip()
             else:
                 stat_map[stat] = cell.text
     if 'date_game' not in stat_map:
@@ -295,7 +295,7 @@ def format_live_log(log_map, title="**{player}**'s most recent game"):
     return discord.Embed(title=title, description=log_string)
 
 
-def format_log(log_map, title="**{player}**'s most recent game", name_only=True, add_date_header=True, season=False):
+def format_log(log_map, title="{player}'s most recent game", name_only=True, add_date_header=True, season=False):
     def fmt_season(key):
         if season:
             return f"{key}_per_g"
@@ -320,7 +320,7 @@ def format_log(log_map, title="**{player}**'s most recent game", name_only=True,
     blk = log_map.get(fmt_season('blk'), "")
     pf = log_map.get(fmt_season('pf'), "")
     to = log_map.get(fmt_season('tov'), "")
-    name = log_map['name'].encode('latin1').decode('utf-8')
+    name = log_map['name'].encode('latin1').decode('utf-8').strip()
     if name_only:
         title = title.format(player=name)
     else:
@@ -332,4 +332,4 @@ def format_log(log_map, title="**{player}**'s most recent game", name_only=True,
     if DEBUG:
         print(title)
         print(log_string)
-    return discord.Embed(title=title, description=log_string)
+    return discord.Embed(title=title, description=log_string, type='article')
