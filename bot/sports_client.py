@@ -45,10 +45,10 @@ class SportsClient(discord.Client):
         sport = 'nba'
         msg_str = " ".join(message_content)
         # /blurb [firstname]* [lastname]*
-        if command.startswith('/blurb'):
-            yield from self.handle_blurb(message_content, channel, sport)
+        # if command.startswith('/blurb'):
+        #     yield from self.handle_blurb(message_content, channel, sport)
         # /log [player]*
-        elif command.startswith('/log'):
+        if command.startswith('/log'):
             try:
                 embedded_stats = get_basketball_log(msg_str)
                 yield from channel.send(embed=embedded_stats)
@@ -191,13 +191,13 @@ class SportsClient(discord.Client):
         while not self.is_closed:
             # check time every minute
             now = datetime.datetime.now()
-            if now.hour == 14 and now.minute == 30:
+            if now.hour == 9 and now.minute == 30:
                 embed = get_bball_highlight()
                 if embed:
                     await channel.send(embed=embed)
                 else:
                     await channel.send(content="No highlight of the day yesterday")
-            elif now.hour == 15 and now.minute == 0:
+            elif now.hour == 10 and now.minute == 0:
                 embed = get_lowlight()
                 if embed:
                     await channel.send(embed=embed)
@@ -229,7 +229,6 @@ def extract_message(message):
 
 
 if __name__ == "__main__":
-    # token = json.loads(open('token.json', 'r').read())["APP_TOKEN"]
     client = SportsClient()
     token = os.environ.get('TOKEN', '')
     client.loop.create_task(client.highlight_lowlight_loop())
