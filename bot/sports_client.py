@@ -188,7 +188,7 @@ class SportsClient(discord.Client):
     async def highlight_lowlight_loop(self):
         await self.wait_until_ready()
         channel = self.get_channel_from_name("basketball")
-        while not self.is_closed:
+        while True:
             # check time every minute
             now = datetime.datetime.now()
             if now.hour == 9 and now.minute == 30:
