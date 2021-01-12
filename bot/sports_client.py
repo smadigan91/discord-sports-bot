@@ -197,7 +197,7 @@ class SportsClient(discord.Client):
                     await channel.send(embed=embed)
                 else:
                     await channel.send(content="No highlight of the day yesterday")
-            elif now.hour == 10 and now.minute == 0:
+            elif now.hour == 9 and now.minute == 45:
                 embed = get_lowlight()
                 if embed:
                     await channel.send(embed=embed)
