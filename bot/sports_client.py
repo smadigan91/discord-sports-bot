@@ -28,11 +28,7 @@ class SportsClient(discord.Client):
 
     @asyncio.coroutine
     def handle_football_request(self, command, message_content, channel):
-        sport = 'nfl'
-        # /blurb [firstname]* [lastname]*
-        if command.startswith('/blurb'):
-            yield from self.handle_blurb(message_content, channel, sport)
-        elif command.startswith('/start'):
+        if command.startswith('/start'):
             try:
                 embed = start_or_sit(message_content)
                 yield from channel.send(embed=embed)
@@ -41,12 +37,7 @@ class SportsClient(discord.Client):
 
     @asyncio.coroutine
     def handle_basketball_request(self, command, message_content, channel):
-        sport = 'nba'
         msg_str = " ".join(message_content)
-        # /blurb [firstname]* [lastname]*
-        # if command.startswith('/blurb'):
-        #     yield from self.handle_blurb(message_content, channel, sport)
-        # /log [player]*
         if command.startswith('/log'):
             try:
                 embedded_stats = get_basketball_log(msg_str)
@@ -100,7 +91,6 @@ class SportsClient(discord.Client):
 
     @asyncio.coroutine
     def handle_baseball_request(self, command, message_content, channel):
-        sport = 'mlb'
         # /help
         msg_str = " ".join(message_content)
         if command.startswith('/help'):
@@ -109,9 +99,6 @@ class SportsClient(discord.Client):
                 yield from channel.send(embed=help_map)
             except Exception as ex:
                 yield from channel.send(content=str(ex))
-        # /blurb [firstname]* [lastname]*
-        elif command.startswith('/blurb'):
-            yield from self.handle_blurb(message_content, channel, sport)
         # /last [num days]* [player]*
         elif command.startswith('/last'):
             try:
