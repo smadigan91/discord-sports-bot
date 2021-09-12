@@ -49,10 +49,36 @@ def get_start_sit_advice(players, scoring='Standard'):
     less = pcts[1]
     less_experts = less.find_previous().text.split('by')[1]
     start = soup.find(lambda tag: tag.name == 'a' and 'fp-player-name' in tag.attrs)
-    sit = start.find_next(lambda tag: tag.name == 'a' and 'fp-player-name' in tag.attrs)
+    sit = start.find_next(lambda tag: tag.name == 'a' and 'fp-player-name' in tag.attrs and tag['fp-player-name'] != start['fp-player-name'])
+
+    ecr_tag = soup.find(lambda tag: tag.text == 'ECR')
+    ecr_start_tag = ecr_tag.find_next(lambda tag: tag.name == 'td')
+    ecr_start = int(ecr_start_tag.text.split()[1])
+    ecr_sit_tag = ecr_start_tag.find_next(lambda tag: tag.name == 'td')
+    ecr_sit = int(ecr_sit_tag.text.split()[1])
+
+    best_rank_tag = soup.find(lambda tag: tag.text == 'Best Rank')
+    best_rank_start_tag = best_rank_tag.find_next(lambda tag: tag.name == 'td')
+    best_rank_start = int(best_rank_start_tag.text.split()[1])
+    best_rank_sit_tag = best_rank_start_tag.find_next(lambda tag: tag.name == 'td')
+    best_rank_sit = int(best_rank_sit_tag.text.split()[1])
+
+    worst_rank_tag = soup.find(lambda tag: tag.text == 'Worst Rank')
+    worst_rank_start_tag = worst_rank_tag.find_next(lambda tag: tag.name == 'td')
+    worst_rank_start = int(worst_rank_start_tag.text.split()[1])
+    worst_rank_sit_tag = worst_rank_start_tag.find_next(lambda tag: tag.name == 'td')
+    worst_rank_sit = int(worst_rank_sit_tag.text.split()[1])
     title = "**"+title+"**\n"
-    body = "{} {}\n{}\n\n".format('**Start:**', start['fp-player-name'], f"**{more.text}** ({more_experts})")
-    body = body + "{} {}\n{}".format('**Sit:**', sit['fp-player-name'], f"**{less.text}** ({less_experts})")
+
+    body = "{} {}\n{}\n".format('**Start:**', start['fp-player-name'], f"**{more.text}** ({more_experts})")
+    body = body + "{} {}\n".format('**ECR:**', f"**{ecr_start}**" if ecr_start < ecr_sit else ecr_start)
+    body = body + "{} {}\n".format('**Best Rank:**', f"**{best_rank_start}**" if best_rank_start < best_rank_sit else best_rank_start)
+    body = body + "{} {}\n\n".format('**Worst Rank:**', f"**{worst_rank_start}**" if worst_rank_start < worst_rank_sit else worst_rank_start)
+
+    body = body + "{} {}\n{}\n".format('**Sit:**', sit['fp-player-name'], f"**{less.text}** ({less_experts})")
+    body = body + "{} {}\n".format('**ECR:**', f"**{ecr_sit}**" if ecr_sit < ecr_start else ecr_sit)
+    body = body + "{} {}\n".format('**Best Rank:**', f"**{best_rank_sit}**" if best_rank_sit < best_rank_start else best_rank_sit)
+    body = body + "{} {}\n\n".format('**Worst Rank:**', f"**{worst_rank_sit}**" if worst_rank_sit < worst_rank_start else worst_rank_sit)
     if DEBUG:
         print(title)
         print(body)
@@ -72,5 +98,5 @@ def search_dropdown(player_name):
     return search_name
 
 # DEBUG = True
-# msg = '/start josh gordon or crabtree ppr'
+# msg = '/start mostert or aiyuk ppr'
 # start_or_sit(msg.split()[1:])
