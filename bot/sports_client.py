@@ -217,5 +217,5 @@ def extract_message(message):
 if __name__ == "__main__":
     client = SportsClient()
     token = os.environ.get('TOKEN', '')
-    # client.loop.create_task(client.highlight_lowlight_loop())
+    client.loop.create_task(client.highlight_lowlight_loop())
     client.run(token)
