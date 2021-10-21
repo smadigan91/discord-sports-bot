@@ -22,7 +22,7 @@ class SportsClient(discord.Client):
             elif channel.name in ["american-football", "fantasy-not-soccer"]:
                 command, message_content = extract_message(message)
                 yield from self.handle_football_request(command, message_content, channel)
-            elif channel.name in ["sportsbot-testing", "basketball", "better-late-than-never", "bltn-trades"]:
+            elif channel.name in ["sportsbot-testing", "basketball", "better-late-than-never", "bltn-trades", "fuck-kyrie-irving"]:
                 command, message_content = extract_message(message)
                 yield from self.handle_basketball_request(command, message_content, channel)
 
