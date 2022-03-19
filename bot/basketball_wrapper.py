@@ -233,7 +233,7 @@ def get_player_log_table(search):
 
 def get_avg_log_table(search, last):
     player_soup = get_player_page(search)
-    career_games = int(player_soup.find('h4', class_='poptip', attrs={'data-tip': 'Games'}).find_next('p').find_next('p').text)
+    career_games = int(player_soup.find('span', class_='poptip', attrs={'data-tip': 'Games'}).find_next('p').find_next('p').text)
     name_node = player_soup.find('h1', attrs={'itemprop': 'name'})
     name = name_node.text
     if last > career_games:
