@@ -63,9 +63,9 @@ def get_log(search, stat_type=None, player_url=None, date=None, last_days=None, 
     response = get(player_url if player_url else search_url.format(search=urllib.parse.quote(search)))
     soup = BeautifulSoup(response.text, 'html.parser')
     log_holder = soup.find('span', text="Game Logs")
-    
+
     if log_holder:
-        name_node = soup.find('h1', attrs={'itemprop':'name'})
+        name_node = soup.find('div', attrs={"id": "meta"}).find_next('span')
         name = name_node.text
         if last_days:
             end_date = datetime.date.today() - datetime.timedelta(days=1)
@@ -97,7 +97,7 @@ def get_log(search, stat_type=None, player_url=None, date=None, last_days=None, 
                 raise NoResultsError("No batting stats for %s" % name)
             elif stat_type == PITCHER:
                 raise NoResultsError("No pitching stats for %s" % name)
-        
+
     elif soup.findChild('div', class_='search-results'):
         mlb_players = soup.find('div', attrs={"id":"players"})
         if mlb_players:
@@ -146,7 +146,7 @@ def get_gamelog_table(name, response, player_type, date_range=None, most_recent=
         table = soup.find('table', attrs={'id':tag_id}).find('tbody').findChildren(
             lambda tag:tag.name == 'tr' and not 'thead' == tag.get('class') and tag.findChild(
                 lambda tag:tag.name == "td" and tag['data-stat'] == 'date_game'
-                and ((date_range[0] <= dt.strptime(tag.get('csk').split(".")[0], "%Y-%m-%d").date() <= date_range[1]) if len(date_range) > 1 
+                and ((date_range[0] <= dt.strptime(tag.get('csk').split(".")[0], "%Y-%m-%d").date() <= date_range[1]) if len(date_range) > 1
                      else (dt.strptime(tag.get('csk').split(".")[0], "%Y-%m-%d").date() == dt.strptime(date_range[1], "%Y-%m-%d").date()))))
         if not table:
             if len(date_range) == 1:
@@ -250,7 +250,7 @@ def format_player_stats(name, player_type, stat_map, date_range, season_year=Non
         title = "%s on %s vs %s" % (name, stat_map['DATE'], stat_map['VS'])
     else:
         title = "%s from %s through %s" % (name, date_range[0], date_range[1])
-        
+
     if date_range: body += display_get('GP', stat_map)
     if player_type == PITCHER:
         if not date_range and not season_year:
@@ -312,7 +312,3 @@ def display_get(key, stats, key_override=None, default=""):
         return "**" + (key if not key_override else key_override) + ':** ' + str(stats[key]) + "\n"
     else:
         return "**" + (key if not key_override else key_override) + ':** ' + default + "\n"
-
-# debug purposes only
-# DEBUG = True
-# get_log("Edubray Ramos", last_days=10)
