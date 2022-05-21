@@ -75,7 +75,7 @@ def get_lowlight():
 
 def get_season_map(search, year):
     player_soup = get_player_page(search)
-    name_node = player_soup.find('h1', attrs={'itemprop': 'name'})
+    name_node = player_soup.find('div', attrs={"id": "meta"}).find_next('span')
     name = name_node.text
     stat_rows = player_soup.find('table', attrs={'id': 'per_game'}).find('tbody').findChildren(
         lambda tag: tag.name == 'tr' and ((tag.get('id') is not None and tag.get('id').split('.')[1] == str(year))
@@ -92,7 +92,7 @@ def get_season_map(search, year):
 
 def get_career_map(search):
     player_soup = get_player_page(search)
-    name_node = player_soup.find('h1', attrs={'itemprop': 'name'})
+    name_node = player_soup.find('div', attrs={"id": "meta"}).find_next('span')
     name = name_node.text
     stat_rows = player_soup.find('table', attrs={'id': 'per_game'}).find('tfoot').findChildren(
         lambda tag: tag.name == 'tr')
@@ -219,7 +219,7 @@ def get_highlight_lowlight_map(highlight=True):
 def get_player_log_table(search):
     player_soup = get_player_page(search)
     log_holder = player_soup.find('span', text="Game Logs")
-    name_node = player_soup.find('h1', attrs={'itemprop': 'name'})
+    name_node = player_soup.find('div', attrs={"id": "meta"}).find_next('span')
     name = name_node.text
     game_log_link_list = log_holder.find_next('div').find('ul').findChildren('a')
     game_log_link = game_log_link_list.pop()
@@ -234,7 +234,7 @@ def get_player_log_table(search):
 def get_avg_log_table(search, last):
     player_soup = get_player_page(search)
     career_games = int(player_soup.find('span', class_='poptip', attrs={'data-tip': 'Games'}).find_next('p').find_next('p').text)
-    name_node = player_soup.find('h1', attrs={'itemprop': 'name'})
+    name_node = player_soup.find('div', attrs={"id": "meta"}).find_next('span')
     name = name_node.text
     if last > career_games:
         raise ValueError(f'{name} has only played {career_games} career games')
