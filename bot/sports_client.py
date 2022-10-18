@@ -12,38 +12,35 @@ from help_commands import get_help_text
 
 class SportsClient(discord.Client):
 
-    @asyncio.coroutine
-    def on_message(self, message):
+    async def on_message(self, message):
         if message.content:
             channel = message.channel
             if channel.name in ["baseball"]:
                 command, message_content = extract_message(message)
-                yield from self.handle_baseball_request(command, message_content, channel)
+                await self.handle_baseball_request(command, message_content, channel)
             elif channel.name in ["american-football", "fantasy-not-soccer"]:
                 command, message_content = extract_message(message)
-                yield from self.handle_football_request(command, message_content, channel)
+                await self.handle_football_request(command, message_content, channel)
             elif channel.name in ["sportsbot-testing", "basketball", "better-late-than-never", "bltn-trades", "fuck-kyrie-irving"]:
                 command, message_content = extract_message(message)
-                yield from self.handle_basketball_request(command, message_content, channel)
+                await self.handle_basketball_request(command, message_content, channel)
 
-    @asyncio.coroutine
-    def handle_football_request(self, command, message_content, channel):
+    async def handle_football_request(self, command, message_content, channel):
         if command.startswith('/start'):
             try:
                 embed = start_or_sit(message_content)
-                yield from channel.send(embed=embed)
+                channel.send(embed=embed)
             except Exception as ex:
-                yield from channel.send(content=str(ex))
+                channel.send(content=str(ex))
 
-    @asyncio.coroutine
-    def handle_basketball_request(self, command, message_content, channel):
+    async def handle_basketball_request(self, command, message_content, channel):
         msg_str = " ".join(message_content)
         if command.startswith('/log'):
             try:
                 embedded_stats = get_basketball_log(msg_str)
-                yield from channel.send(embed=embedded_stats)
+                channel.send(embed=embedded_stats)
             except Exception as ex:
-                yield from channel.send(content=str(ex))
+                channel.send(content=str(ex))
         # /season [year] [player]*
         elif command.startswith('/season'):
             try:
@@ -51,22 +48,22 @@ class SportsClient(discord.Client):
                     embedded_stats = get_season(" ".join(message_content[1:]), year=message_content[0])
                 else:
                     embedded_stats = get_season(" ".join(message_content), year=None)
-                yield from channel.send(embed=embedded_stats)
+                channel.send(embed=embedded_stats)
             except Exception as ex:
-                yield from channel.send(content=str(ex))
+                channel.send(content=str(ex))
         # /career [player]*
         elif command.startswith('/career'):
             try:
                 embedded_stats = get_career(" ".join(message_content))
-                yield from channel.send(embed=embedded_stats)
+                channel.send(embed=embedded_stats)
             except Exception as ex:
-                yield from channel.send(content=str(ex))
+                channel.send(content=str(ex))
         elif command.startswith('/live'):
             try:
                 embedded_stats = get_live_log(message_content)
-                yield from channel.send(embed=embedded_stats)
+                channel.send(embed=embedded_stats)
             except Exception as ex:
-                yield from channel.send(content=str(ex))
+                channel.send(content=str(ex))
         elif command.startswith('/last'):
             try:
                 games = int(message_content[0])
@@ -75,30 +72,29 @@ class SportsClient(discord.Client):
                 if len(message_content) < 2:
                     raise ValueError('Must provide both a number of games and a name')
                 embedded_stats = get_last(' '.join(message_content[1:]), last=games)
-                yield from channel.send(embed=embedded_stats)
+                channel.send(embed=embedded_stats)
             except Exception as ex:
-                yield from channel.send(content=str(ex))
+                channel.send(content=str(ex))
         elif command.startswith('/highlight'):
             try:
-                yield from self.do_bball_highlight(channel=channel)
+                await self.do_bball_highlight(channel=channel)
             except Exception as ex:
-                yield from channel.send(content=str(ex))
+                channel.send(content=str(ex))
         elif command.startswith('/lowlight'):
             try:
-                yield from self.do_bball_lowlight(channel=channel)
+                await self.do_bball_lowlight(channel=channel)
             except Exception as ex:
-                yield from channel.send(content=str(ex))
+                channel.send(content=str(ex))
 
-    @asyncio.coroutine
-    def handle_baseball_request(self, command, message_content, channel):
+    async def handle_baseball_request(self, command, message_content, channel):
         # /help
         msg_str = " ".join(message_content)
         if command.startswith('/help'):
             try:
                 help_map = discord.Embed(title="Commands List", description=get_help_text())
-                yield from channel.send(embed=help_map)
+                channel.send(embed=help_map)
             except Exception as ex:
-                yield from channel.send(content=str(ex))
+                channel.send(content=str(ex))
         # /last [num days]* [player]*
         elif command.startswith('/last'):
             try:
@@ -108,16 +104,16 @@ class SportsClient(discord.Client):
                 if len(message_content) < 2:
                     raise ValueError('Must provide both a number of days and a name')
                 embedded_stats = get_baseball_log(" ".join(message_content[1:]), last_days=days)
-                yield from channel.send(embed=embedded_stats)
+                channel.send(embed=embedded_stats)
             except Exception as ex:
-                yield from channel.send(content=str(ex))
+                channel.send(content=str(ex))
         # /log [player]*
         elif command.startswith('/log'):
             try:
                 embedded_stats = get_baseball_log(msg_str)
-                yield from channel.send(embed=embedded_stats)
+                channel.send(embed=embedded_stats)
             except Exception as ex:
-                yield from channel.send(content=str(ex))
+                channel.send(content=str(ex))
         # /season [year] [player]*
         elif command.startswith('/season'):
             try:
@@ -126,9 +122,9 @@ class SportsClient(discord.Client):
                                                       season_year=message_content[0])
                 else:
                     embedded_stats = get_baseball_log(" ".join(message_content), season=True)
-                yield from channel.send(embed=embedded_stats)
+                channel.send(embed=embedded_stats)
             except Exception as ex:
-                yield from channel.send(content=str(ex))
+                channel.send(content=str(ex))
         # /highlight [player]* [index]
         elif command.startswith('/highlight'):
             response = "\n%s\n%s"
@@ -136,20 +132,19 @@ class SportsClient(discord.Client):
                 if message_content[0] == 'index':
                     search = '%2B'.join(message_content[1:])
                     highlights = get_highlight(search, list_index=True)
-                    yield from channel.send(embed=highlights)
+                    channel.send(embed=highlights)
                 elif message_content[-1].isdigit():
                     index = message_content[-1]
                     search = '%2B'.join(message_content[:-1])
                     highlight = get_highlight(search, int(index) - 1)
-                    yield from channel.send(content=response % highlight)
+                    channel.send(content=response % highlight)
                 else:
                     highlight = get_highlight('%2B'.join(message_content))
-                    yield from channel.send(content=response % highlight)
+                    channel.send(content=response % highlight)
             except Exception as ex:
-                yield from channel.send(content=str(ex))
+                channel.send(content=str(ex))
 
-    @asyncio.coroutine
-    def handle_blurb(self, message_content, channel, sport):
+    async def handle_blurb(self, message_content, channel, sport):
         try:
             first = message_content[0]
             last = " ".join(message_content[1:])  # hopefully handles the Jrs
@@ -164,9 +159,9 @@ class SportsClient(discord.Client):
             else:
                 raise ValueError(f"Invalid value for 'sport': {sport}")
             embedded_blurb = discord.Embed(title=" ".join([first, last]).title(), description=blurb)
-            yield from channel.send(embed=embedded_blurb)
+            channel.send(embed=embedded_blurb)
         except Exception as ex:
-            yield from channel.send(content=str(ex))
+            channel.send(content=str(ex))
 
     def get_channel_from_name(self, channel_name):
         return discord.utils.get(client.get_all_channels(), name=channel_name)
@@ -191,21 +186,19 @@ class SportsClient(discord.Client):
                     await channel.send(content="No lowlight of the day yesterday")
             await asyncio.sleep(60)
 
-    @asyncio.coroutine
-    def do_bball_highlight(self, channel=None):
+    async def do_bball_highlight(self, channel=None):
         embed = get_bball_highlight()
         if embed:
-            yield from channel.send(embed=embed)
+            channel.send(embed=embed)
         else:
-            yield from channel.send(content="No highlight of the day yesterday")
+            channel.send(content="No highlight of the day yesterday")
 
-    @asyncio.coroutine
-    def do_bball_lowlight(self, channel=None):
+    async def do_bball_lowlight(self, channel=None):
         embed = get_lowlight()
         if embed:
-            yield from channel.send(embed=embed)
+            channel.send(embed=embed)
         else:
-            yield from channel.send(content="No lowlight of the day yesterday")
+            channel.send(content="No lowlight of the day yesterday")
 
 
 # given a message return "/command", "Rest of message"
@@ -217,5 +210,5 @@ def extract_message(message):
 if __name__ == "__main__":
     client = SportsClient()
     token = os.environ.get('TOKEN', '')
-    # client.loop.create_task(client.highlight_lowlight_loop())
+    client.loop.create_task(client.highlight_lowlight_loop())
     client.run(token)
