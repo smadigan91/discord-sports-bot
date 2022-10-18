@@ -188,26 +188,6 @@ class SportsClient(commands.Bot):
     def get_channel_from_name(self, channel_name):
         return discord.utils.get(self.get_all_channels(), name=channel_name)
 
-    async def highlight_lowlight_loop(self):
-        await self.wait_until_ready()
-        channel = self.get_channel_from_name("basketball")
-        while True:
-            # check time every minute
-            now = datetime.datetime.now()
-            if now.hour == 14 and now.minute == 00:
-                embed = get_bball_highlight()
-                if embed:
-                    await channel.send(embed=embed)
-                else:
-                    await channel.send(content="No highlight of the day yesterday")
-            elif now.hour == 14 and now.minute == 15:
-                embed = get_lowlight()
-                if embed:
-                    await channel.send(embed=embed)
-                else:
-                    await channel.send(content="No lowlight of the day yesterday")
-            await asyncio.sleep(60)
-
     async def do_bball_highlight(self, channel=None):
         embed = get_bball_highlight()
         if embed:
