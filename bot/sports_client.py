@@ -34,7 +34,6 @@ class SportsClient(commands.Bot):
     async def on_message(self, message):
         if message.content:
             channel = message.channel
-            print(channel.id)
             if channel.id in baseball_channel_ids:
                 command, message_content = extract_message(message)
                 await self.handle_baseball_request(command, message_content, channel)
@@ -42,7 +41,6 @@ class SportsClient(commands.Bot):
                 command, message_content = extract_message(message)
                 await self.handle_football_request(command, message_content, channel)
             elif channel.id in basketball_channel_ids:
-                print('handling message')
                 command, message_content = extract_message(message)
                 await self.handle_basketball_request(command, message_content, channel)
 
@@ -56,7 +54,6 @@ class SportsClient(commands.Bot):
 
     async def handle_basketball_request(self, command, message_content, channel):
         msg_str = " ".join(message_content)
-        print("handling basketball message " + msg_str)
         if command.startswith('/log'):
             try:
                 embedded_stats = get_basketball_log(msg_str)
