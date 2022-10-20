@@ -96,12 +96,12 @@ class SportsClient(commands.Bot):
                 await channel.send(content=str(ex))
         elif command.startswith('/highlight'):
             try:
-                await self.do_bball_highlight(channel=channel)
+                await self.do_bball_highlight()
             except Exception as ex:
                 await channel.send(content=str(ex))
         elif command.startswith('/lowlight'):
             try:
-                await self.do_bball_lowlight(channel=channel)
+                await self.do_bball_lowlight()
             except Exception as ex:
                 await channel.send(content=str(ex))
 
