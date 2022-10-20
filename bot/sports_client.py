@@ -185,14 +185,16 @@ class SportsClient(commands.Bot):
     def get_channel_from_name(self, channel_name):
         return discord.utils.get(self.get_all_channels(), name=channel_name)
 
-    async def do_bball_highlight(self, channel=None):
+    async def do_bball_highlight(self):
+        channel = self.get_channel(main_basketball_channel_id)
         embed = get_bball_highlight()
         if embed:
             await channel.send(embed=embed)
         else:
             await channel.send(content="No highlight of the day yesterday")
 
-    async def do_bball_lowlight(self, channel=None):
+    async def do_bball_lowlight(self):
+        channel = self.get_channel(main_basketball_channel_id)
         embed = get_lowlight()
         if embed:
             await channel.send(embed=embed)
@@ -207,20 +209,11 @@ class HighlightLowlightCog(commands.Cog):
 
     @tasks.loop(minutes=1.0)
     async def highlight_lowlight(self):
-        basketball_channel = self.bot.get_channel(main_basketball_channel_id)
         now = datetime.datetime.now()
         if now.hour == 14 and now.minute == 00:
-            embed = get_bball_highlight()
-            if embed:
-                await basketball_channel.send(embed=embed)
-            else:
-                await basketball_channel.send(content="No highlight of the day yesterday")
+            await self.bot.do_bball_highlight()
         elif now.hour == 14 and now.minute == 15:
-            embed = get_lowlight()
-            if embed:
-                await basketball_channel.send(embed=embed)
-            else:
-                await basketball_channel.send(content="No lowlight of the day yesterday")
+            await self.bot.do_bball_lowlight()
 
     async def start_loop(self):
         await self.highlight_lowlight.start()
