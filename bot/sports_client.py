@@ -20,10 +20,8 @@ basketball_channel_ids = [bot_test_id, 428207200230440961, 428207239010975745, 8
 
 class SportsClient(commands.Bot):
 
-    intents = discord.Intents.default()
-
     def __init__(self):
-        intents = discord.Intents(messages=True, message_content=True)
+        intents = discord.Intents(messages=True, message_content=True, guilds=True)
         super().__init__(intents=intents, command_prefix="/")
         self.highlight_lowlight = HighlightLowlightCog(self)
         asyncio.run(self.add_cog(self.highlight_lowlight))
