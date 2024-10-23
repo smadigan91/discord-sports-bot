@@ -23,8 +23,8 @@ class SportsClient(commands.Bot):
     def __init__(self):
         intents = discord.Intents(messages=True, message_content=True, guilds=True)
         super().__init__(intents=intents, command_prefix="/")
-        # self.highlight_lowlight = HighlightLowlightCog(self)
-        # asyncio.run(self.add_cog(self.highlight_lowlight))
+        self.highlight_lowlight = HighlightLowlightCog(self)
+        asyncio.run(self.add_cog(self.highlight_lowlight))
 
     async def on_ready(self):
         await self.highlight_lowlight.start_loop()
