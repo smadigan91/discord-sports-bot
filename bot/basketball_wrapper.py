@@ -333,6 +333,3 @@ def format_log(log_map, title="{player}'s most recent game", name_only=True, add
         print(title)
         print(log_string)
     return discord.Embed(title=title, description=log_string, type='article')
-
-DEBUG = True
-get_season('LeBron James', 2024)
