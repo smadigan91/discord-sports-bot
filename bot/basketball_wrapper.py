@@ -77,7 +77,7 @@ def get_season_map(search, year):
     player_soup = get_player_page(search)
     name_node = player_soup.find('div', attrs={"id": "meta"}).find_next('span')
     name = name_node.text
-    stat_rows = player_soup.find('table', attrs={'id': 'per_game'}).find('tbody').findChildren(
+    stat_rows = player_soup.find('table', attrs={'id': 'per_game_stats'}).find('tbody').findChildren(
         lambda tag: tag.name == 'tr' and ((tag.get('id') is not None and tag.get('id').split('.')[1] == str(year))
                                           if year else True))
     if not stat_rows:
@@ -333,3 +333,6 @@ def format_log(log_map, title="{player}'s most recent game", name_only=True, add
         print(title)
         print(log_string)
     return discord.Embed(title=title, description=log_string, type='article')
+
+DEBUG = True
+get_season('LeBron James', 2024)
