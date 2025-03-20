@@ -106,7 +106,7 @@ def get_career_map(search):
 
 def get_log_map(search):
     name, table = get_player_log_table(search=search)
-    row = table.find_all(lambda tag: tag.name == 'tr' and 'pgl_basic' in tag.get('id', '')).pop()
+    row = table.find_all(lambda tag: tag.name == 'tr' and 'player_game_log_reg' in tag.get('id', '')).pop()
     stat_map = index_row(row)
     stat_map['name'] = name.strip()
     return stat_map
@@ -227,7 +227,7 @@ def get_player_log_table(search):
         game_log_link = game_log_link_list.pop()
     href = game_log_link.get('href')
     log_soup = get_soup(bbref_url + href)
-    table = log_soup.find('table', attrs={'id': 'pgl_basic'}).find('tbody')
+    table = log_soup.find('table', attrs={'id': 'player_game_log_reg'}).find('tbody')
     return name, table
 
 
